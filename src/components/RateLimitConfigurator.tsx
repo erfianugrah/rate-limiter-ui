@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { PlusCircle, MinusCircle, Info } from 'lucide-react';
-import { v4 as uuidv4 } from 'uuid';
+'use client'
+
+import React, { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { PlusCircle, MinusCircle, Info } from 'lucide-react'
+import { v4 as uuidv4 } from 'uuid'
 import {
   LABELS,
   LOGICAL_OPERATORS,
@@ -15,57 +17,66 @@ import {
   FINGERPRINT_PARAMS,
   REQUEST_MATCH_FIELDS,
   REQUEST_MATCH_OPERATORS,
-} from './config-variables';
+} from './config-variables'
+import { Checkbox } from '@/components/ui/checkbox'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 type Condition = {
-  field: string;
-  operator: string;
-  value: string;
-};
+  field: string
+  operator: string
+  value: string
+  headerName?: string
+  headerValue?: string
+}
 
 type OperatorCondition = {
-  type: 'operator';
-  logic: 'and' | 'or';
-};
+  type: 'operator'
+  logic: 'and' | 'or'
+}
 
 type ConditionGroup = {
-  conditions: (Condition | OperatorCondition | ConditionGroup)[];
-};
+  conditions: (Condition | OperatorCondition | ConditionGroup)[]
+}
+
+type FingerprintParam = {
+  name: string
+  headerName?: string
+  headerValue?: string
+}
 
 type FormData = {
-  id: string;
-  order: number;
-  name: string;
-  description: string;
+  id: string
+  order: number
+  name: string
+  description: string
   rateLimit: {
-    limit: number;
-    period: number;
-  };
+    limit: number
+    period: number
+  }
   requestMatch: {
-    conditions: (Condition | OperatorCondition | ConditionGroup)[];
-  };
+    conditions: (Condition | OperatorCondition | ConditionGroup)[]
+  }
   action: {
-    type: string;
-  };
+    type: string
+  }
   fingerprint: {
-    parameters: string[];
-  };
-};
+    parameters: FingerprintParam[]
+  }
+}
 
-// Type guards to distinguish between different condition types
 const isCondition = (condition: Condition | OperatorCondition | ConditionGroup): condition is Condition => {
-  return 'field' in condition && 'operator' in condition && 'value' in condition;
-};
+  return 'field' in condition && 'operator' in condition && 'value' in condition
+}
 
 const isOperatorCondition = (condition: Condition | OperatorCondition | ConditionGroup): condition is OperatorCondition => {
-  return 'type' in condition && condition.type === 'operator';
-};
+  return 'type' in condition && condition.type === 'operator'
+}
 
 const isConditionGroup = (condition: Condition | OperatorCondition | ConditionGroup): condition is ConditionGroup => {
-  return 'conditions' in condition;
-};
+  return 'conditions' in condition
+}
 
-export default function RateLimitConfigurator() {
+export default function Component() {
   const [formData, setFormData] = useState<FormData>({
     id: uuidv4(),
     order: 1,
@@ -82,58 +93,57 @@ export default function RateLimitConfigurator() {
       type: 'rateLimit',
     },
     fingerprint: {
-      parameters: ['clientIP'],
+      parameters: [],
     },
-  });
+  })
 
-  const [generatedObject, setGeneratedObject] = useState('');
-  const [message, setMessage] = useState('');
+  const [generatedObject, setGeneratedObject] = useState('')
+  const [message, setMessage] = useState('')
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
 
   const handleRateLimitChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+    const { name, value } = e.target
     setFormData((prev) => ({
       ...prev,
       rateLimit: { ...prev.rateLimit, [name]: parseInt(value) },
-    }));
-  };
+    }))
+  }
 
   const addCondition = (parentConditions: (Condition | OperatorCondition | ConditionGroup)[]) => {
-    const newCondition: Condition = { field: 'clientIP', operator: 'eq', value: '' };
-    parentConditions.push(newCondition);
+    const newCondition: Condition = { field: 'clientIP', operator: 'eq', value: '' }
+    parentConditions.push(newCondition)
     if (parentConditions.length > 1) {
-      parentConditions.splice(-1, 0, { type: 'operator', logic: 'and' });
+      parentConditions.splice(-1, 0, { type: 'operator', logic: 'and' })
     }
-    setFormData({ ...formData });
-  };
+    setFormData({ ...formData })
+  }
 
   const addConditionGroup = (parentConditions: (Condition | OperatorCondition | ConditionGroup)[]) => {
-    const newGroup: ConditionGroup = { conditions: [] };
-    parentConditions.push(newGroup);
+    const newGroup: ConditionGroup = { conditions: [] }
+    parentConditions.push(newGroup)
     if (parentConditions.length > 1) {
-      parentConditions.splice(-1, 0, { type: 'operator', logic: 'and' });
+      parentConditions.splice(-1, 0, { type: 'operator', logic: 'and' })
     }
-    setFormData({ ...formData });
-  };
+    setFormData({ ...formData })
+  }
 
   const removeCondition = (parentConditions: (Condition | OperatorCondition | ConditionGroup)[], index: number) => {
-    parentConditions.splice(index, 1);
-    // Remove the operator if it's right before the removed condition or group
+    parentConditions.splice(index, 1)
     if (index > 0 && isOperatorCondition(parentConditions[index - 1])) {
-      parentConditions.splice(index - 1, 1);
+      parentConditions.splice(index - 1, 1)
     }
-    setFormData({ ...formData });
-  };
+    setFormData({ ...formData })
+  }
 
   const renderConditions = (conditions: (Condition | OperatorCondition | ConditionGroup)[], depth = 0) => {
     return conditions.map((condition, index) => {
       if (isConditionGroup(condition)) {
         return (
-          <Card key={index} className="mt-2 mb-2">
+          <Card key={`group-${depth}-${index}`} className="mt-2 mb-2">
             <CardHeader className="flex justify-between">
               <CardTitle className="text-left">Condition Group</CardTitle>
               <Button
@@ -142,47 +152,57 @@ export default function RateLimitConfigurator() {
                 variant="destructive"
                 className="ml-auto"
               >
-                <MinusCircle className="h-4 w-4" />
                 Remove Group
               </Button>
             </CardHeader>
             <CardContent>
               {renderConditions(condition.conditions, depth + 1)}
-              <Button type="button" onClick={() => addCondition(condition.conditions)} className="mr-2 mt-2">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Condition
-              </Button>
-              <Button type="button" onClick={() => addConditionGroup(condition.conditions)} className="mt-2">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Group
-              </Button>
+              <div className="mt-2">
+                <Button type="button" onClick={() => addCondition(condition.conditions)} className="mr-2">
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Condition
+                </Button>
+                <Button type="button" onClick={() => addConditionGroup(condition.conditions)}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Group
+                </Button>
+              </div>
             </CardContent>
           </Card>
-        );
+        )
       } else if (isOperatorCondition(condition)) {
         return (
-          <Select key={index} value={condition.logic} onValueChange={(value) => {
-            condition.logic = value as 'and' | 'or';
-            setFormData({ ...formData });
-          }}>
-            <SelectTrigger className="w-[180px] my-2">
-              <SelectValue placeholder="Select operator" />
+          <Select
+            key={`operator-${depth}-${index}`}
+            value={condition.logic}
+            onValueChange={(value) => {
+              condition.logic = value as 'and' | 'or'
+              setFormData({ ...formData })
+            }}
+          >
+            <SelectTrigger className="w-[100px] my-2">
+              <SelectValue placeholder="Operator" />
             </SelectTrigger>
             <SelectContent>
               {LOGICAL_OPERATORS.map((op) => (
-                <SelectItem key={op.value} value={op.value}>{op.label}</SelectItem>
+                <SelectItem key={op.value} value={op.value}>
+                  {op.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
-        );
+        )
       } else if (isCondition(condition)) {
         return (
-          <div key={index} className="flex items-center space-x-2 my-2">
-            <Select value={condition.field} onValueChange={(value) => {
-              condition.field = value;
-              setFormData({ ...formData });
-            }}>
-              <SelectTrigger className="w-[180px]">
+          <div key={`condition-${depth}-${index}`} className="flex items-center space-x-2 my-2">
+            <Select
+              value={condition.field}
+              onValueChange={(value) => {
+                condition.field = value
+                setFormData({ ...formData })
+              }}
+            >
+              <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder={LABELS.CONDITION_FIELD} />
               </SelectTrigger>
               <SelectContent>
@@ -193,40 +213,71 @@ export default function RateLimitConfigurator() {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={condition.operator} onValueChange={(value) => {
-              condition.operator = value;
-              setFormData({ ...formData });
-            }}>
-              <SelectTrigger className="w-[180px]">
+            <Select
+              value={condition.operator}
+              onValueChange={(value) => {
+                condition.operator = value
+                setFormData({ ...formData })
+              }}
+            >
+              <SelectTrigger className="w-[120px]">
                 <SelectValue placeholder={LABELS.CONDITION_OPERATOR} />
               </SelectTrigger>
               <SelectContent>
                 {REQUEST_MATCH_OPERATORS.map((op) => (
-                  <SelectItem key={`operator-${op.value}`} value={op.value}>{op.label}</SelectItem>
+                  <SelectItem key={`operator-${op.value}`} value={op.value}>
+                    {op.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Input
-              type="text"
-              value={condition.value}
-              onChange={(e) => {
-                condition.value = e.target.value;
-                setFormData({ ...formData });
-              }}
-              placeholder={LABELS.CONDITION_VALUE}
-            />
-            <Button type="button" onClick={() => removeCondition(conditions, index)} variant="destructive">
+            {condition.field === 'header' ? (
+              <>
+                <Input
+                  type="text"
+                  value={condition.headerName || ''}
+                  onChange={(e) => {
+                    condition.headerName = e.target.value
+                    setFormData({ ...formData })
+                  }}
+                  placeholder="Header Name"
+                  className="w-[150px]"
+                />
+                <Input
+                  type="text"
+                  value={condition.headerValue || ''}
+                  onChange={(e) => {
+                    condition.headerValue = e.target.value
+                    setFormData({ ...formData })
+                  }}
+                  placeholder="Header Value"
+                  className="w-[150px]"
+                />
+              </>
+            ) : (
+              <Input
+                type="text"
+                value={condition.value}
+                onChange={(e) => {
+                  condition.value = e.target.value
+                  setFormData({ ...formData })
+                }}
+                placeholder={LABELS.CONDITION_VALUE}
+                className="w-[300px]"
+              />
+            )}
+            <Button type="button" onClick={() => removeCondition(conditions, index)} variant="destructive" size="icon">
               <MinusCircle className="h-4 w-4" />
             </Button>
           </div>
-        );
+        )
       }
-    });
-  };
+    })
+  }
 
   const generateObject = () => {
-    setGeneratedObject(JSON.stringify(formData, null, 2));
-  };
+    setGeneratedObject(JSON.stringify(formData, null, 2))
+  }
 
   const saveConfig = async () => {
     try {
@@ -235,18 +286,18 @@ export default function RateLimitConfigurator() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),  // Send formData to the backend
-      });
+        body: JSON.stringify(formData),
+      })
 
       if (response.ok) {
-        setMessage('Config saved successfully!');
+        setMessage('Config saved successfully!')
       } else {
-        setMessage('Failed to save config');
+        setMessage('Failed to save config')
       }
     } catch (error: any) {
-      setMessage('An error occurred: ' + error.message);
+      setMessage('An error occurred: ' + error.message)
     }
-  };
+  }
 
   return (
     <TooltipProvider>
@@ -286,14 +337,16 @@ export default function RateLimitConfigurator() {
           </CardHeader>
           <CardContent>
             {renderConditions(formData.requestMatch.conditions)}
-            <Button type="button" onClick={() => addCondition(formData.requestMatch.conditions)} className="mr-2 mt-2">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Condition
-            </Button>
-            <Button type="button" onClick={() => addConditionGroup(formData.requestMatch.conditions)} className="mt-2">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Group
-            </Button>
+            <div className="mt-2">
+              <Button type="button" onClick={() => addCondition(formData.requestMatch.conditions)} className="mr-2">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Condition
+              </Button>
+              <Button type="button" onClick={() => addConditionGroup(formData.requestMatch.conditions)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Group
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
@@ -302,13 +355,16 @@ export default function RateLimitConfigurator() {
             <CardTitle>Action</CardTitle>
           </CardHeader>
           <CardContent>
-            <Select value={formData.action.type} onValueChange={(value) => setFormData((prev) => ({ ...prev, action: { type: value } }))}>
+            <Select
+              value={formData.action.type}
+              onValueChange={(value) => setFormData((prev) => ({ ...prev, action: { type: value } }))}
+            >
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Select action type" />
               </SelectTrigger>
               <SelectContent>
                 {ACTION_TYPES.map((action) => (
-                  <SelectItem key={action.value} value={action.value}>
+                  <SelectItem key={`action-${action.value}`} value={action.value}>
                     {action.label}
                   </SelectItem>
                 ))}
@@ -322,40 +378,80 @@ export default function RateLimitConfigurator() {
             <CardTitle>{LABELS.FINGERPRINT_PARAMS}</CardTitle>
           </CardHeader>
           <CardContent>
-            <Select
-              value={formData.fingerprint.parameters[0]}
-              onValueChange={(value) => setFormData((prev) => ({ ...prev, fingerprint: { parameters: [value] } }))}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select parameter" />
-              </SelectTrigger>
-              <SelectContent>
-                {FINGERPRINT_PARAMS.map((param) => (
-                  <SelectItem key={`fingerprint-${param.value}`} value={param.value}>
-                    <div className="flex items-center">
-                      {param.label}
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <Info className="ml-2 h-4 w-4" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{param.label}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <ScrollArea className="h-[200px] w-full border rounded-md">
+              {FINGERPRINT_PARAMS.map((param) => (
+                <div key={`fingerprint-${param.value}`} className="flex items-center space-x-2 p-2">
+                  <Checkbox
+                    id={`fingerprint-${param.value}`}
+                    checked={formData.fingerprint.parameters.some((p) => p.name === param.value)}
+                    onCheckedChange={(checked) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        fingerprint: {
+                          parameters: checked
+                            ? [...prev.fingerprint.parameters, { name: param.value }]
+                            : prev.fingerprint.parameters.filter((p) => p.name !== param.value),
+                        },
+                      }))
+                    }}
+                  />
+                  <Label htmlFor={`fingerprint-${param.value}`}>{param.label}</Label>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="h-4 w-4" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{param.description}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              ))}
+            </ScrollArea>
+            {formData.fingerprint.parameters.some((p) => p.name === 'header') && (
+              <div className="mt-2 space-y-2">
+                <Input
+                  type="text"
+                  value={formData.fingerprint.parameters.find((p) => p.name === 'header')?.headerName || ''}
+                  onChange={(e) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      fingerprint: {
+                        parameters: prev.fingerprint.parameters.map((p) =>
+                          p.name === 'header' ? { ...p, headerName: e.target.value } : p
+                        ),
+                      },
+                    }))
+                  }}
+                  placeholder="Header Name"
+                />
+                <Input
+                  type="text"
+                  value={formData.fingerprint.parameters.find((p) => p.name === 'header')?.headerValue || ''}
+                  onChange={(e) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      fingerprint: {
+                        parameters: prev.fingerprint.parameters.map((p) =>
+                          p.name === 'header' ? { ...p, headerValue: e.target.value } : p
+                        ),
+                      },
+                    }))
+                  }}
+                  placeholder="Header Value"
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        <Button type="button" onClick={generateObject}>
-          Generate Object
-        </Button>
-        <Button type="button" onClick={saveConfig} className="ml-2">
-          Save Config
-        </Button>
+        <div className="flex space-x-2">
+          <Button type="button" onClick={generateObject}>
+            Generate Object
+          </Button>
+          <Button type="button" onClick={saveConfig}>
+            Save Config
+          </Button>
+        </div>
 
         {generatedObject && (
           <Card>
@@ -373,5 +469,5 @@ export default function RateLimitConfigurator() {
         {message && <p className="text-green-600">{message}</p>}
       </form>
     </TooltipProvider>
-  );
+  )
 }
