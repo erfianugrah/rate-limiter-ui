@@ -1,3 +1,15 @@
+// Define types
+type FingerprintTooltips = {
+  [key: string]: string;
+};
+
+type FieldConfig = {
+  value: string;
+  label: string;
+  description?: string;
+};
+
+// Constants
 export const LABELS = {
   ORDER: 'Order:',
   RULE_NAME: 'Rule Name:',
@@ -12,6 +24,7 @@ export const LABELS = {
   CONDITION_OPERATOR: 'Operator:',
   CONDITION_VALUE: 'Value:',
 };
+
 export const LOGICAL_OPERATORS = [
   { value: 'and', label: 'AND' },
   { value: 'or', label: 'OR' },
@@ -31,7 +44,6 @@ export const ACTION_TYPES = [
 ];
 
 export const MESSAGES = {
-  // CLIENT_IP_INCLUDED: 'Client IP is always included by default.',
   CONFIG_SAVED: 'Configuration saved successfully!',
   SAVE_ERROR: 'Error: ',
   LOAD_ERROR: 'Error loading configuration',
@@ -66,7 +78,33 @@ export const API_ENDPOINTS = {
 
 export const ADD_RULE_BUTTON_TEXT = 'Add New Rule';
 
-const COMMON_FIELDS = [
+export const FINGERPRINT_TOOLTIPS: FingerprintTooltips = {
+  'cf.tlsVersion': 'The TLS version used for the connection',
+  'cf.tlsCipher': 'The cipher suite used for the TLS connection',
+  'cf.asn': 'Autonomous System Number of the client',
+  'headers.user-agent': 'User agent string from the client',
+  'cf.httpProtocol': 'HTTP protocol version used for the request',
+  'cf.clientTrustScore': "Cloudflare's trust score for the client",
+  'cf.botManagement.score': 'Bot score from Cloudflare Bot Management',
+  'cf.botManagement.staticResource': 'Indicates if the request is for a static resource',
+  'cf.botManagement.verifiedBot': 'Indicates if the request is from a verified bot',
+  'cf.clientAcceptEncoding': 'Accept-Encoding header from the client',
+  'headers.sec-fetch-dest': 'Sec-Fetch-Dest header from the client',
+  'headers.sec-fetch-mode': 'Sec-Fetch-Mode header from the client',
+  'headers.sec-fetch-site': 'Sec-Fetch-Site header from the client',
+  'headers.sec-fetch-user': 'Sec-Fetch-User header from the client',
+  'headers.dnt': 'Do Not Track header from the client',
+  'headers.sec-gpc': 'Global Privacy Control header from the client',
+  'cf.asOrganization': 'Organization associated with the ASN',
+  'cf.colo': 'Cloudflare data center that handled the request',
+  'cf.clientTcpRtt': 'Round-trip time for the TCP connection',
+  'cf.edgeRequestKeepAliveStatus': 'Status of the keep-alive connection from the edge',
+  'cf.tlsClientAuth.certPresented': 'Whether the client presented a TLS certificate',
+  'cf.tlsClientAuth.certVerified': 'Whether the presented client certificate was verified',
+  'cf.tlsClientAuth.certRevoked': 'Whether the presented client certificate was revoked',
+};
+
+const COMMON_FIELDS: FieldConfig[] = [
   { value: 'headers.user-agent', label: 'User Agent' },
   { value: 'headers.accept-language', label: 'Accept Language' },
   { value: 'headers.accept-encoding', label: 'Accept Encoding' },
@@ -109,26 +147,77 @@ const COMMON_FIELDS = [
   { value: 'cf.tlsClientAuth.certSerial', label: 'TLS Client Cert Serial' },
 ];
 
-export const FINGERPRINT_PARAMS = [
-  { value: 'clientIP', label: 'Client IP (supports CIDR)' },
-  { value: 'method', label: 'HTTP Method' },
-  { value: 'url', label: 'Full URL' },
-  { value: 'headers.name', label: 'Specific Header Value' },
-  { value: 'headers.nameValue', label: 'Header Name and Value Pair' },
-  { value: 'body', label: 'Full Request Body' },
-  { value: 'body.custom', label: 'Custom Body Field' },
-  { value: 'url.protocol', label: 'URL Protocol' },
-  { value: 'url.hostname', label: 'URL Hostname' },
-  { value: 'url.port', label: 'URL Port' },
-  { value: 'url.pathname', label: 'URL Path' },
-  { value: 'url.search', label: 'URL Query String' },
-  { value: 'url.hash', label: 'URL Fragment' },
-  { value: 'headers.accept', label: 'Accept Header' },
-  { value: 'headers.cookie', label: 'Cookie Header' },
-  ...COMMON_FIELDS,
+export const FINGERPRINT_PARAMS: FieldConfig[] = [
+  {
+    value: 'clientIP',
+    label: 'Client IP (supports CIDR)',
+    description: "Use the client's IP address for fingerprinting",
+  },
+  {
+    value: 'method',
+    label: 'HTTP Method',
+    description: 'Use the HTTP method (GET, POST, etc.) for fingerprinting',
+  },
+  { value: 'url', label: 'Full URL', description: 'Use the complete URL for fingerprinting' },
+  {
+    value: 'headers.name',
+    label: 'Specific Header Value',
+    description: 'Use a specific header value for fingerprinting',
+  },
+  {
+    value: 'headers.nameValue',
+    label: 'Header Name and Value Pair',
+    description: 'Use a specific header name and value pair for fingerprinting',
+  },
+  {
+    value: 'body',
+    label: 'Full Request Body',
+    description: 'Use the entire request body for fingerprinting',
+  },
+  {
+    value: 'body.custom',
+    label: 'Custom Body Field',
+    description: 'Use a custom field from the request body for fingerprinting',
+  },
+  {
+    value: 'url.protocol',
+    label: 'URL Protocol',
+    description: 'Use the URL protocol (http, https) for fingerprinting',
+  },
+  {
+    value: 'url.hostname',
+    label: 'URL Hostname',
+    description: 'Use the URL hostname for fingerprinting',
+  },
+  { value: 'url.port', label: 'URL Port', description: 'Use the URL port for fingerprinting' },
+  { value: 'url.pathname', label: 'URL Path', description: 'Use the URL path for fingerprinting' },
+  {
+    value: 'url.search',
+    label: 'URL Query String',
+    description: 'Use the URL query string for fingerprinting',
+  },
+  {
+    value: 'url.hash',
+    label: 'URL Fragment',
+    description: 'Use the URL fragment for fingerprinting',
+  },
+  {
+    value: 'headers.accept',
+    label: 'Accept Header',
+    description: 'Use the Accept header for fingerprinting',
+  },
+  {
+    value: 'headers.cookie',
+    label: 'Cookie Header',
+    description: 'Use the Cookie header for fingerprinting',
+  },
+  ...COMMON_FIELDS.map((field) => ({
+    ...field,
+    description: FINGERPRINT_TOOLTIPS[field.value] || `Use the ${field.label} for fingerprinting`,
+  })),
 ];
 
-export const REQUEST_MATCH_FIELDS = [
+export const REQUEST_MATCH_FIELDS: FieldConfig[] = [
   { value: 'clientIP', label: 'Client IP (supports CIDR)' },
   { value: 'method', label: 'HTTP Method' },
   { value: 'url', label: 'Full URL' },
@@ -146,32 +235,6 @@ export const REQUEST_MATCH_FIELDS = [
   { value: 'headers.cookie', label: 'Cookie Header' },
   ...COMMON_FIELDS,
 ];
-
-export const FINGERPRINT_TOOLTIPS = {
-  'cf.tlsVersion': 'The TLS version used for the connection',
-  'cf.tlsCipher': 'The cipher suite used for the TLS connection',
-  'cf.asn': 'Autonomous System Number of the client',
-  'headers.user-agent': 'User agent string from the client',
-  'cf.httpProtocol': 'HTTP protocol version used for the request',
-  'cf.clientTrustScore': "Cloudflare's trust score for the client",
-  'cf.botManagement.score': 'Bot score from Cloudflare Bot Management',
-  'cf.botManagement.staticResource': 'Indicates if the request is for a static resource',
-  'cf.botManagement.verifiedBot': 'Indicates if the request is from a verified bot',
-  'cf.clientAcceptEncoding': 'Accept-Encoding header from the client',
-  'headers.sec-fetch-dest': 'Sec-Fetch-Dest header from the client',
-  'headers.sec-fetch-mode': 'Sec-Fetch-Mode header from the client',
-  'headers.sec-fetch-site': 'Sec-Fetch-Site header from the client',
-  'headers.sec-fetch-user': 'Sec-Fetch-User header from the client',
-  'headers.dnt': 'Do Not Track header from the client',
-  'headers.sec-gpc': 'Global Privacy Control header from the client',
-  'cf.asOrganization': 'Organization associated with the ASN',
-  'cf.colo': 'Cloudflare data center that handled the request',
-  'cf.clientTcpRtt': 'Round-trip time for the TCP connection',
-  'cf.edgeRequestKeepAliveStatus': 'Status of the keep-alive connection from the edge',
-  'cf.tlsClientAuth.certPresented': 'Whether the client presented a TLS certificate',
-  'cf.tlsClientAuth.certVerified': 'Whether the presented client certificate was verified',
-  'cf.tlsClientAuth.certRevoked': 'Whether the presented client certificate was revoked',
-};
 
 export const REQUEST_MATCH_OPERATORS = [
   { value: 'eq', label: 'Equals' },
