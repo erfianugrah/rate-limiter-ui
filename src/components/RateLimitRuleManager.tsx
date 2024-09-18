@@ -13,6 +13,17 @@ import { PlusCircle, Edit, Trash2 } from 'lucide-react'
 import { v4 as uuidv4 } from 'uuid'
 import RateLimitConfigurator from './RateLimitConfigurator'
 import { useToast } from "@/components/ui/use-toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 interface Condition {
   field: string
@@ -94,9 +105,25 @@ function SortableItem(props: SortableItemProps) {
             <Button variant="outline" size="sm" onClick={() => props.onEdit(props.rule)} className="mr-2" disabled={props.isLoading}>
               <Edit className="mr-2 h-4 w-4" /> Edit
             </Button>
-            <Button variant="destructive" size="sm" onClick={() => props.onDelete(props.rule.id)} disabled={props.isLoading}>
-              <Trash2 className="mr-2 h-4 w-4" /> Delete
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm" disabled={props.isLoading}>
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure you want to delete this rule?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the rate limit rule.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => props.onDelete(props.rule.id)}>Delete</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </CardContent>
       </Card>
@@ -128,7 +155,6 @@ export default function RateLimitRuleManager(): JSX.Element {
       const response = await fetch('/api/config')
       if (response.ok) {
         const data = await response.json()
-        // Ensure that data.rules is an array, if not, set it to an empty array
         setRules(Array.isArray(data.rules) ? data.rules : [])
       } else {
         throw new Error('Failed to fetch rules')
@@ -140,7 +166,6 @@ export default function RateLimitRuleManager(): JSX.Element {
         description: "Failed to fetch rules. Please try again.",
         variant: "destructive",
       })
-      // Set rules to an empty array in case of error
       setRules([])
     } finally {
       setIsLoading(false)
@@ -159,15 +184,12 @@ export default function RateLimitRuleManager(): JSX.Element {
 
   const handleDeleteRule = async (ruleId: string): Promise<void> => {
     setIsLoading(true)
+    const previousRules = [...rules]
+    setRules(rules.filter(rule => rule.id !== ruleId))
+
     try {
-      const updatedRules = rules.filter(rule => rule.id !== ruleId)
-      const response = await fetch('/api/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rules: updatedRules }),
-      })
+      const response = await fetch(`/api/config/${ruleId}`, { method: 'DELETE' })
       if (response.ok) {
-        setRules(updatedRules)
         toast({
           title: "Success",
           description: "Rule deleted successfully.",
@@ -177,6 +199,7 @@ export default function RateLimitRuleManager(): JSX.Element {
       }
     } catch (error) {
       console.error('Error deleting rule:', error)
+      setRules(previousRules)
       toast({
         title: "Error",
         description: "Failed to delete rule. Please try again.",
@@ -189,23 +212,21 @@ export default function RateLimitRuleManager(): JSX.Element {
 
   const handleSaveRule = async (ruleConfig: RuleConfig): Promise<void> => {
     setIsLoading(true)
-    try {
-      const isNewRule = !rules.some(rule => rule.id === ruleConfig.id)
-      let updatedRules: RuleConfig[]
-      if (isNewRule) {
-        updatedRules = [...rules, { ...ruleConfig, id: uuidv4(), order: rules.length }]
-      } else {
-        updatedRules = rules.map(rule => (rule.id === ruleConfig.id ? ruleConfig : rule))
-      }
+    const isNewRule = !rules.some(rule => rule.id === ruleConfig.id)
+    const updatedRule = isNewRule ? { ...ruleConfig, id: uuidv4(), order: rules.length } : ruleConfig
+    const previousRules = [...rules]
+    const updatedRules = isNewRule ? [...rules, updatedRule] : rules.map(rule => (rule.id === updatedRule.id ? updatedRule : rule))
 
+    setRules(updatedRules)
+
+    try {
       const response = await fetch('/api/config', {
-        method: 'POST',
+        method: isNewRule ? 'POST' : 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rules: updatedRules }),
+        body: JSON.stringify(updatedRule),
       })
 
       if (response.ok) {
-        setRules(updatedRules)
         setIsModalOpen(false)
         toast({
           title: "Success",
@@ -216,6 +237,7 @@ export default function RateLimitRuleManager(): JSX.Element {
       }
     } catch (error) {
       console.error('Error saving rule:', error)
+      setRules(previousRules)
       toast({
         title: "Error",
         description: "Failed to save rule. Please try again.",
@@ -241,7 +263,7 @@ export default function RateLimitRuleManager(): JSX.Element {
       
       setIsLoading(true)
       try {
-        const response = await fetch('/api/config', {
+        const response = await fetch('/api/config/reorder', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ rules: updatedRules }),

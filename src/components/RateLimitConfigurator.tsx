@@ -415,7 +415,7 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
               <Label>Conditions</Label>
               {renderConditions(conditionalAction.conditions)}
               <div className="mt-2">
-                <Button type="button" onClick={() => addCondition(conditionalAction.conditions)} className="mr-2" size="sm">
+                <Button type="button" onClick={()=> addCondition(conditionalAction.conditions)} className="mr-2" size="sm">
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Add Condition
                 </Button>
@@ -471,173 +471,178 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
 
   return (
     <TooltipProvider>
-      <form onSubmit={handleSubmit} className="space-y-8 w-full max-w-5xl mx-auto">
-        <Tabs defaultValue="basic" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="basic">Basic Info</TabsTrigger>
-            <TabsTrigger value="rateLimit">Rate Limit</TabsTrigger>
-            <TabsTrigger value="fingerprint">Fingerprint</TabsTrigger>
-            <TabsTrigger value="requestMatch">Request Match</TabsTrigger>
-            <TabsTrigger value="actions">Actions</TabsTrigger>
-          </TabsList>
+      <div className="flex flex-col h-full max-h-[80vh] w-full max-w-6xl mx-auto">
+        <ScrollArea className="flex-grow">
+          <form className="space-y-8 w-full p-6">
+            <Tabs defaultValue="basic" className="space-y-4">
+              <TabsList className="grid w-full grid-cols-5">
+                <TabsTrigger value="basic">Basic Info</TabsTrigger>
+                <TabsTrigger value="rateLimit">Rate Limit</TabsTrigger>
+                <TabsTrigger value="fingerprint">Fingerprint</TabsTrigger>
+                <TabsTrigger value="requestMatch">Request Match</TabsTrigger>
+                <TabsTrigger value="actions">Actions</TabsTrigger>
+              </TabsList>
 
-          <TabsContent value="basic">
-            <Card>
-              <CardHeader>
-                <CardTitle>Basic Information</CardTitle>
-                <CardDescription>Provide general information about the rule.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">{LABELS.RULE_NAME}</Label>
-                  <Input type="text" id="name" name="name" value={formData.name} onChange={handleInputChange} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="description">{LABELS.DESCRIPTION}</Label>
-                  <Textarea id="description" name="description" value={formData.description} onChange={handleInputChange} />
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="rateLimit">
-            <Card>
-              <CardHeader>
-                <CardTitle>Rate Limit Configuration</CardTitle>
-                <CardDescription>Set the number of requests allowed within a specific time period.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="limit">{LABELS.REQUEST_LIMIT}</Label>
-                  <Input type="number" id="limit" name="limit" value={formData.rateLimit.limit} onChange={handleRateLimitChange} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="period">{LABELS.TIME_PERIOD}</Label>
-                  <Input type="number" id="period" name="period" value={formData.rateLimit.period} onChange={handleRateLimitChange} />
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="fingerprint">
-            <Card>
-              <CardHeader>
-                <CardTitle>Fingerprint Configuration</CardTitle>
-                <CardDescription>Select the parameters to use for identifying unique clients.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col md:flex-row gap-4">
-                  <ScrollArea className="h-[500px] w-full md:w-1/2 rounded-md border p-4">
-                    <div className="grid grid-cols-1 gap-4">
-                      {FINGERPRINT_PARAMS.map((param) => (
-                        <div key={param.value} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`fingerprint-${param.value}`}
-                            checked={formData.fingerprint.parameters.some((p) => p.name === param.value)}
-                            onCheckedChange={(checked) => handleFingerprintChange(checked as boolean, param.value)}
-                          />
-                          <Label htmlFor={`fingerprint-${param.value}`} className="flex-1">{param.label}</Label>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Info className="h-4 w-4 text-gray-500" />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{param.description}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
-                      ))}
+              <TabsContent value="basic">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Basic Information</CardTitle>
+                    <CardDescription>Provide general information about the rule.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">{LABELS.RULE_NAME}</Label>
+                      <Input type="text" id="name" name="name" value={formData.name} onChange={handleInputChange} />
                     </div>
-                  </ScrollArea>
-                  <ScrollArea className="h-[500px] w-full md:w-1/2 rounded-md border p-4">
-                    {renderFingerprintInputs()}
-                  </ScrollArea>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                    <div className="space-y-2">
+                      <Label htmlFor="description">{LABELS.DESCRIPTION}</Label>
+                      <Textarea id="description" name="description" value={formData.description} onChange={handleInputChange} />
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-          <TabsContent value="requestMatch">
-            <Card>
-              <CardHeader>
-                <CardTitle>Request Match Configuration</CardTitle>
-                <CardDescription>Define conditions to match incoming requests.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-[500px] rounded-md border p-4">
-                  {formData.requestMatch.conditions.length > 0 ? (
-                    renderConditions(formData.requestMatch.conditions)
-                  ) : (
-                    <p className="text-center text-gray-500">No conditions added yet.</p>
-                  )}
-                  <div className="mt-4 space-x-2">
-                    <Button type="button" onClick={() => addCondition(formData.requestMatch.conditions)} size="sm">
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Add Condition
-                    </Button>
-                    <Button type="button" onClick={() => addConditionGroup(formData.requestMatch.conditions)} size="sm">
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Add Group
-                    </Button>
-                  </div>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              <TabsContent value="rateLimit">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Rate Limit Configuration</CardTitle>
+                    <CardDescription>Set the number of requests allowed within a specific time period.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="limit">{LABELS.REQUEST_LIMIT}</Label>
+                      <Input type="number" id="limit" name="limit" value={formData.rateLimit.limit} onChange={handleRateLimitChange} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="period">{LABELS.TIME_PERIOD}</Label>
+                      <Input type="number" id="period" name="period" value={formData.rateLimit.period} onChange={handleRateLimitChange} />
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-          <TabsContent value="actions">
-            <Card>
-              <CardHeader>
-                <CardTitle>Actions Configuration</CardTitle>
-                <CardDescription>Configure the default action and conditional actions.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <Label>Default Action</Label>
-                    <Select
-                      value={formData.action.type}
-                      onValueChange={(value) => setFormData((prev) => ({ ...prev, action: { type: value } }))}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select action type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ACTION_TYPES.map((action, idx) => (
-                          <SelectItem key={`action-${action.value}-${idx}`} value={action.value}>
-                            {action.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-4">
-                    <Label>Conditional Actions</Label>
-                    <ScrollArea className="h-[400px] rounded-md border p-4">
-                      {formData.conditionalActions.length > 0 ? (
-                        renderConditionalActions()
+              <TabsContent value="fingerprint">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Fingerprint Configuration</CardTitle>
+                    <CardDescription>Select the parameters to use for identifying unique clients.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-col md:flex-row gap-4">
+                      <ScrollArea className="h-[500px] w-full md:w-1/2 rounded-md border p-4">
+                        <div className="grid grid-cols-1 gap-4">
+                          {FINGERPRINT_PARAMS.map((param) => (
+                            <div key={param.value} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`fingerprint-${param.value}`}
+                                checked={formData.fingerprint.parameters.some((p) => p.name === param.value)}
+                                onCheckedChange={(checked) => handleFingerprintChange(checked as boolean, param.value)}
+                              />
+                              <Label htmlFor={`fingerprint-${param.value}`} className="flex-1">{param.label}</Label>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info className="h-4 w-4 text-gray-500" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{param.description}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                      <ScrollArea className="h-[500px] w-full md:w-1/2 rounded-md border p-4">
+                        {renderFingerprintInputs()}
+                      </ScrollArea>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="requestMatch">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Request Match Configuration</CardTitle>
+                    <CardDescription>Define conditions to match incoming requests.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[500px] rounded-md border p-4">
+                      {formData.requestMatch.conditions.length > 0 ? (
+                        renderConditions(formData.requestMatch.conditions)
                       ) : (
-                        <p className="text-center text-gray-500">No conditional actions added yet.</p>
+                        <p className="text-center text-gray-500">No conditions added yet.</p>
                       )}
+                      <div className="mt-4 space-x-2">
+                        <Button type="button" onClick={() => addCondition(formData.requestMatch.conditions)} size="sm">
+                          <PlusCircle className="mr-2 h-4 w-4" />
+                          Add Condition
+                        </Button>
+                        <Button type="button" onClick={() => addConditionGroup(formData.requestMatch.conditions)} size="sm">
+                          <PlusCircle className="mr-2 h-4 w-4" />
+                          Add Group
+                        </Button>
+                      </div>
                     </ScrollArea>
-                    <Button type="button" onClick={addConditionalAction} size="sm" className="w-full">
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Add Conditional Action
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-        <div className="flex justify-end space-x-4">
+              <TabsContent value="actions">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Actions Configuration</CardTitle>
+                    <CardDescription>Configure the default action and conditional actions.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-6">
+                      <div className="space-y-2">
+                        <Label>Default Action</Label>
+                        <Select
+                          value={formData.action.type}
+                          onValueChange={(value) => setFormData((prev) => ({ ...prev, action: { type: value } }))}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select action type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ACTION_TYPES.map((action, idx) => (
+                              <SelectItem key={`action-${action.value}-${idx}`} value={action.value}>
+                                {action.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-4">
+                        <Label>Conditional Actions</Label>
+                        <ScrollArea className="h-[400px] rounded-md border p-4">
+                          {formData.conditionalActions.length > 0 ? (
+                            renderConditionalActions()
+                          ) : (
+                            <p className="text-center text-gray-500">No conditional actions added yet.</p>
+                          )}
+                        </ScrollArea>
+                        <Button type="button" onClick={addConditionalAction} size="sm" className="w-full">
+                          <PlusCircle className="mr-2 h-4 w-4" />
+                          Add Conditional Action
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </form>
+        </ScrollArea>
+        <div className="flex justify-end space-x-4 p-4 bg-background border-t">
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit">Save Configuration</Button>
+          <Button onClick={(e) => { e.preventDefault(); onSave(formData); }}>
+            Save Configuration
+          </Button>
         </div>
-      </form>
+      </div>
     </TooltipProvider>
   )
 }
