@@ -99,7 +99,6 @@ const COMMON_FIELDS = [
   { value: 'cf.colo', label: 'Colo' },
   { value: 'cf.clientTcpRtt', label: 'Client TCP RTT' },
   { value: 'cf.edgeRequestKeepAliveStatus', label: 'Edge Request Keep Alive Status' },
-  { value: 'cf.httpProtocol', label: 'HTTP Protocol' },
   { value: 'cf.tlsClientAuth.certPresented', label: 'TLS Client Cert Presented' },
   { value: 'cf.tlsClientAuth.certVerified', label: 'TLS Client Cert Verified' },
   { value: 'cf.tlsClientAuth.certRevoked', label: 'TLS Client Cert Revoked' },
@@ -108,8 +107,6 @@ const COMMON_FIELDS = [
   { value: 'cf.tlsClientAuth.certNotBefore', label: 'TLS Client Cert Not Before' },
   { value: 'cf.tlsClientAuth.certNotAfter', label: 'TLS Client Cert Not After' },
   { value: 'cf.tlsClientAuth.certSerial', label: 'TLS Client Cert Serial' },
-  { value: 'cf.tlsClientAuth.certPresented', label: 'TLS Client Cert Presented' },
-  { value: 'cf.tlsClientAuth.certRevoked', label: 'TLS Client Cert Revoked' },
 ];
 
 export const FINGERPRINT_PARAMS = [
