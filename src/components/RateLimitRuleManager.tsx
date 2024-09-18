@@ -1,16 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import type { DragEndEvent } from '@dnd-kit/core'
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { PlusCircle, Edit, Trash2 } from 'lucide-react'
-import { v4 as uuidv4 } from 'uuid'
+import { PlusCircle, Edit, Trash2, GripVertical } from 'lucide-react'
 import RateLimitConfigurator from './RateLimitConfigurator'
 import { useToast } from "@/components/ui/use-toast"
 import {
@@ -24,6 +24,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { useRuleStore } from '@/store/ruleStore'
 
 interface Condition {
   field: string
@@ -76,54 +77,74 @@ interface SortableItemProps {
   isLoading: boolean
 }
 
-function SortableItem(props: SortableItemProps) {
+function SortableItem({ id, rule, onEdit, onDelete, isLoading }: SortableItemProps) {
   const {
     attributes,
     listeners,
     setNodeRef,
     transform,
     transition,
-  } = useSortable({id: props.id});
+  } = useSortable({id: id});
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
   };
 
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  const handleDeleteClick = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDeleteDialogOpen(true);
+  }, []);
+
+  const handleDeleteConfirm = useCallback(() => {
+    onDelete(id);
+    setIsDeleteDialogOpen(false);
+  }, [id, onDelete]);
+
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div ref={setNodeRef} style={style}>
       <Card className="mb-4">
-        <CardHeader>
-          <CardTitle>{props.rule.name}</CardTitle>
+        <CardHeader className="flex flex-row items-center space-x-4 pb-2">
+          <div {...attributes} {...listeners} className="cursor-move">
+            <GripVertical className="h-5 w-5 text-gray-500" />
+          </div>
+          <div className="flex-grow">
+            <CardTitle className="text-lg font-semibold">{rule.name}</CardTitle>
+            <p className="text-sm text-gray-500">{rule.description}</p>
+          </div>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-gray-500 mb-2">{props.rule.description}</p>
-          <p className="text-sm">
-            Rate Limit: {props.rule.rateLimit.limit} requests per {props.rule.rateLimit.period} seconds
-          </p>
-          <div className="flex justify-end mt-4">
-            <Button variant="outline" size="sm" onClick={() => props.onEdit(props.rule)} className="mr-2" disabled={props.isLoading}>
-              <Edit className="mr-2 h-4 w-4" /> Edit
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="sm" disabled={props.isLoading}>
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you sure you want to delete this rule?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete the rate limit rule.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => props.onDelete(props.rule.id)}>Delete</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+          <div className="flex justify-between items-center">
+            <p className="text-sm">
+              Rate Limit: {rule.rateLimit.limit} requests per {rule.rateLimit.period} seconds
+            </p>
+            <div className="flex space-x-2">
+              <Button variant="outline" size="sm" onClick={() => onEdit(rule)} disabled={isLoading}>
+                <Edit className="mr-2 h-4 w-4" /> Edit
+              </Button>
+              <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm" onClick={handleDeleteClick} disabled={isLoading}>
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure you want to delete this rule?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete the rate limit rule.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteConfirm}>Delete</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -132,163 +153,103 @@ function SortableItem(props: SortableItemProps) {
 }
 
 export default function RateLimitRuleManager(): JSX.Element {
-  const [rules, setRules] = useState<RuleConfig[]>([])
+  const { rules, isLoading, fetchRules, addRule, updateRule, deleteRule, reorderRules } = useRuleStore()
   const [editingRule, setEditingRule] = useState<RuleConfig | null>(null)
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
-  const [isLoading, setIsLoading] = useState<boolean>(false)
   const { toast } = useToast()
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
 
   useEffect(() => {
-    fetchRules()
-  }, [])
-
-  const fetchRules = async (): Promise<void> => {
-    setIsLoading(true)
-    try {
-      const response = await fetch('/api/config')
-      if (response.ok) {
-        const data = await response.json()
-        setRules(Array.isArray(data.rules) ? data.rules : [])
-      } else {
-        throw new Error('Failed to fetch rules')
-      }
-    } catch (error) {
-      console.error('Error fetching rules:', error)
+    fetchRules().catch((error: Error) => {
       toast({
         title: "Error",
-        description: "Failed to fetch rules. Please try again.",
+        description: `Failed to fetch rules: ${error.message}`,
         variant: "destructive",
       })
-      setRules([])
-    } finally {
-      setIsLoading(false)
-    }
-  }
+    })
+  }, [fetchRules, toast])
 
-  const handleAddRule = (): void => {
+  const handleAddRule = useCallback((): void => {
     setEditingRule(null)
     setIsModalOpen(true)
-  }
+  }, [])
 
-  const handleEditRule = (rule: RuleConfig): void => {
+  const handleEditRule = useCallback((rule: RuleConfig): void => {
     setEditingRule(rule)
     setIsModalOpen(true)
-  }
+  }, [])
 
-  const handleDeleteRule = async (ruleId: string): Promise<void> => {
-    setIsLoading(true)
-    const previousRules = [...rules]
-    setRules(rules.filter(rule => rule.id !== ruleId))
-
+  const handleDeleteRule = useCallback(async (ruleId: string): Promise<void> => {
     try {
-      const response = await fetch(`/api/config/${ruleId}`, { method: 'DELETE' })
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Rule deleted successfully.",
-        })
-      } else {
-        throw new Error('Failed to delete rule')
-      }
+      await deleteRule(ruleId)
+      toast({
+        title: "Success",
+        description: "Rule deleted successfully.",
+      })
     } catch (error) {
-      console.error('Error deleting rule:', error)
-      setRules(previousRules)
       toast({
         title: "Error",
-        description: "Failed to delete rule. Please try again.",
+        description: `Failed to delete rule: ${(error as Error).message}`,
         variant: "destructive",
       })
-    } finally {
-      setIsLoading(false)
     }
-  }
+  }, [deleteRule, toast])
 
-  const handleSaveRule = async (ruleConfig: RuleConfig): Promise<void> => {
-    setIsLoading(true)
-    const isNewRule = !rules.some(rule => rule.id === ruleConfig.id)
-    const updatedRule = isNewRule ? { ...ruleConfig, id: uuidv4(), order: rules.length } : ruleConfig
-    const previousRules = [...rules]
-    const updatedRules = isNewRule ? [...rules, updatedRule] : rules.map(rule => (rule.id === updatedRule.id ? updatedRule : rule))
-
-    setRules(updatedRules)
-
+  const handleSaveRule = useCallback(async (ruleConfig: RuleConfig): Promise<void> => {
     try {
-      const response = await fetch('/api/config', {
-        method: isNewRule ? 'POST' : 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedRule),
-      })
-
-      if (response.ok) {
-        setIsModalOpen(false)
-        toast({
-          title: "Success",
-          description: isNewRule ? "New rule added successfully." : "Rule updated successfully.",
-        })
+      if (editingRule) {
+        await updateRule(ruleConfig)
       } else {
-        throw new Error('Failed to save rule')
+        await addRule(ruleConfig)
       }
+      setIsModalOpen(false)
+      toast({
+        title: "Success",
+        description: editingRule ? "Rule updated successfully." : "New rule added successfully.",
+      })
     } catch (error) {
-      console.error('Error saving rule:', error)
-      setRules(previousRules)
       toast({
         title: "Error",
-        description: "Failed to save rule. Please try again.",
+        description: `Failed to save rule: ${(error as Error).message}`,
         variant: "destructive",
       })
-    } finally {
-      setIsLoading(false)
     }
-  }
+  }, [editingRule, updateRule, addRule, toast])
 
-  const handleDragEnd = async (event: any): Promise<void> => {
+  const handleDragEnd = useCallback(async (event: DragEndEvent): Promise<void> => {
     const {active, over} = event;
 
-    if (active.id !== over.id) {
-      setRules((items) => {
-        const oldIndex = items.findIndex(item => item.id === active.id);
-        const newIndex = items.findIndex(item => item.id === over.id);
-        
-        return arrayMove(items, oldIndex, newIndex);
-      });
-
-      const updatedRules = rules.map((rule, index) => ({ ...rule, order: index }))
+    if (active.id !== over?.id) {
+      const oldIndex = rules.findIndex((item: RuleConfig) => item.id === active.id);
+      const newIndex = rules.findIndex((item: RuleConfig) => item.id === over?.id);
       
-      setIsLoading(true)
+      const newRules = arrayMove(rules, oldIndex, newIndex).map((rule: RuleConfig, index: number) => ({ ...rule, order: index }));
+      
       try {
-        const response = await fetch('/api/config/reorder', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rules: updatedRules }),
+        await reorderRules(newRules)
+        toast({
+          title: "Success",
+          description: "Rules reordered successfully.",
         })
-
-        if (response.ok) {
-          toast({
-            title: "Success",
-            description: "Rules reordered successfully.",
-          })
-        } else {
-          throw new Error('Failed to update rule order')
-        }
       } catch (error) {
-        console.error('Error updating rule order:', error)
         toast({
           title: "Error",
-          description: "Failed to update rule order. Please try again.",
+          description: `Failed to update rule order: ${(error as Error).message}`,
           variant: "destructive",
         })
-      } finally {
-        setIsLoading(false)
       }
     }
-  }
+  }, [rules, reorderRules, toast])
 
   return (
     <div className="container mx-auto p-4">
@@ -303,10 +264,10 @@ export default function RateLimitRuleManager(): JSX.Element {
           onDragEnd={handleDragEnd}
         >
           <SortableContext 
-            items={rules.map(rule => rule.id)}
+            items={rules.map((rule: RuleConfig) => rule.id)}
             strategy={verticalListSortingStrategy}
           >
-            {rules.map((rule) => (
+            {rules.map((rule: RuleConfig) => (
               <SortableItem 
                 key={rule.id} 
                 id={rule.id}
@@ -325,6 +286,9 @@ export default function RateLimitRuleManager(): JSX.Element {
         <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>{editingRule ? 'Edit Rule' : 'Add New Rule'}</DialogTitle>
+            <DialogDescription>
+              {editingRule ? 'Modify the existing rate limit rule.' : 'Create a new rate limit rule.'}
+            </DialogDescription>
           </DialogHeader>
           <ScrollArea className="max-h-[80vh]">
             <RateLimitConfigurator

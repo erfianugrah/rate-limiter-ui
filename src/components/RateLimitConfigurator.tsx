@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -196,45 +196,68 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
       } else {
         const typedCondition = condition as Condition
         return (
-          <div key={`condition-${depth}-${index}`} className="flex flex-wrap items-center gap-2 my-2">
-            <Select
-              value={typedCondition.field}
-              onValueChange={(value) => {
-                typedCondition.field = value
-                setFormData({ ...formData })
-              }}
-            >
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder={LABELS.CONDITION_FIELD} />
-              </SelectTrigger>
-              <SelectContent>
-                {REQUEST_MATCH_FIELDS.map((field, idx) => (
-                  <SelectItem key={`field-${field.value}-${index}-${idx}`} value={field.value}>
-                    {field.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={typedCondition.operator}
-              onValueChange={(value) => {
-                typedCondition.operator = value
-                setFormData({ ...formData })
-              }}
-            >
-              <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder={LABELS.CONDITION_OPERATOR} />
-              </SelectTrigger>
-              <SelectContent>
-                {REQUEST_MATCH_OPERATORS.map((op, idx) => (
-                  <SelectItem key={`operator-${op.value}-${index}-${idx}`} value={op.value}>
-                    {op.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {typedCondition.field === 'headers.nameValue' ? (
-              <>
+          <div key={`condition-${depth}-${index}`} className="flex items-center gap-2 my-2">
+            <div className="flex-grow flex flex-wrap items-center gap-2">
+              <Select
+                value={typedCondition.field}
+                onValueChange={(value) => {
+                  typedCondition.field = value
+                  setFormData({ ...formData })
+                }}
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder={LABELS.CONDITION_FIELD} />
+                </SelectTrigger>
+                <SelectContent>
+                  {REQUEST_MATCH_FIELDS.map((field, idx) => (
+                    <SelectItem key={`field-${field.value}-${index}-${idx}`} value={field.value}>
+                      {field.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={typedCondition.operator}
+                onValueChange={(value) => {
+                  typedCondition.operator = value
+                  setFormData({ ...formData })
+                }}
+              >
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue placeholder={LABELS.CONDITION_OPERATOR} />
+                </SelectTrigger>
+                <SelectContent>
+                  {REQUEST_MATCH_OPERATORS.map((op, idx) => (
+                    <SelectItem key={`operator-${op.value}-${index}-${idx}`} value={op.value}>
+                      {op.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {typedCondition.field === 'headers.nameValue' ? (
+                <>
+                  <Input
+                    type="text"
+                    value={typedCondition.headerName || ''}
+                    onChange={(e) => {
+                      typedCondition.headerName = e.target.value
+                      setFormData({ ...formData })
+                    }}
+                    placeholder="Header Name"
+                    className="w-[150px]"
+                  />
+                  <Input
+                    type="text"
+                    value={typedCondition.headerValue || ''}
+                    onChange={(e) => {
+                      typedCondition.headerValue = e.target.value
+                      setFormData({ ...formData })
+                    }}
+                    placeholder="Header Value"
+                    className="w-[150px]"
+                  />
+                </>
+              ) : typedCondition.field === 'headers.name' ? (
                 <Input
                   type="text"
                   value={typedCondition.headerName || ''}
@@ -243,42 +266,21 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
                     setFormData({ ...formData })
                   }}
                   placeholder="Header Name"
-                  className="w-[150px]"
+                  className="flex-grow"
                 />
+              ) : (
                 <Input
                   type="text"
-                  value={typedCondition.headerValue || ''}
+                  value={typedCondition.value}
                   onChange={(e) => {
-                    typedCondition.headerValue = e.target.value
+                    typedCondition.value = e.target.value
                     setFormData({ ...formData })
                   }}
-                  placeholder="Header Value"
-                  className="w-[150px]"
+                  placeholder={LABELS.CONDITION_VALUE}
+                  className="flex-grow"
                 />
-              </>
-            ) : typedCondition.field === 'headers.name' ? (
-              <Input
-                type="text"
-                value={typedCondition.headerName || ''}
-                onChange={(e) => {
-                  typedCondition.headerName = e.target.value
-                  setFormData({ ...formData })
-                }}
-                placeholder="Header Name"
-                className="w-[300px]"
-              />
-            ) : (
-              <Input
-                type="text"
-                value={typedCondition.value}
-                onChange={(e) => {
-                  typedCondition.value = e.target.value
-                  setFormData({ ...formData })
-                }}
-                placeholder={LABELS.CONDITION_VALUE}
-                className="w-[300px]"
-              />
-            )}
+              )}
+            </div>
             <Button type="button" onClick={() => removeCondition(conditions, index)} variant="destructive" size="icon">
               <MinusCircle className="h-4 w-4" />
             </Button>
@@ -414,8 +416,8 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
             <div>
               <Label>Conditions</Label>
               {renderConditions(conditionalAction.conditions)}
-              <div className="mt-2">
-                <Button type="button" onClick={()=> addCondition(conditionalAction.conditions)} className="mr-2" size="sm">
+              <div className="mt-2 space-x-2">
+                <Button type="button" onClick={() => addCondition(conditionalAction.conditions)} size="sm">
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Add Condition
                 </Button>
@@ -435,7 +437,7 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
                   setFormData((prev) => ({ ...prev, conditionalActions: updatedActions }))
                 }}
               >
-                <SelectTrigger className="w-[200px]">
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select action type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -464,25 +466,27 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
     }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSave(formData)
+  const generateRuleExpression = (config: RuleConfig): string => {
+    return JSON.stringify(config, null, 2)
   }
+
+  const ruleExpression = useMemo(() => generateRuleExpression(formData), [formData])
 
   return (
     <TooltipProvider>
-      <div className="flex flex-col h-full max-h-[80vh] w-full max-w-6xl mx-auto">
-        <ScrollArea className="flex-grow">
-          <form className="space-y-8 w-full p-6">
-            <Tabs defaultValue="basic" className="space-y-4">
-              <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="basic">Basic Info</TabsTrigger>
-                <TabsTrigger value="rateLimit">Rate Limit</TabsTrigger>
-                <TabsTrigger value="fingerprint">Fingerprint</TabsTrigger>
-                <TabsTrigger value="requestMatch">Request Match</TabsTrigger>
-                <TabsTrigger value="actions">Actions</TabsTrigger>
-              </TabsList>
+      <div className="flex flex-col h-full w-full max-w-7xl mx-auto">
+        <Tabs defaultValue="basic" className="flex-grow flex flex-col">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="basic">Basic Info</TabsTrigger>
+            <TabsTrigger value="rateLimit">Rate Limit</TabsTrigger>
+            <TabsTrigger value="fingerprint">Fingerprint</TabsTrigger>
+            <TabsTrigger value="requestMatch">Request Match</TabsTrigger>
+            <TabsTrigger value="actions">Actions</TabsTrigger>
+            <TabsTrigger value="expression">Rule Expression</TabsTrigger>
+          </TabsList>
 
+          <ScrollArea className="flex-grow">
+            <div className="p-6 space-y-8">
               <TabsContent value="basic">
                 <Card>
                   <CardHeader>
@@ -529,31 +533,35 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
                   </CardHeader>
                   <CardContent>
                     <div className="flex flex-col md:flex-row gap-4">
-                      <ScrollArea className="h-[500px] w-full md:w-1/2 rounded-md border p-4">
-                        <div className="grid grid-cols-1 gap-4">
-                          {FINGERPRINT_PARAMS.map((param) => (
-                            <div key={param.value} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`fingerprint-${param.value}`}
-                                checked={formData.fingerprint.parameters.some((p) => p.name === param.value)}
-                                onCheckedChange={(checked) => handleFingerprintChange(checked as boolean, param.value)}
-                              />
-                              <Label htmlFor={`fingerprint-${param.value}`} className="flex-1">{param.label}</Label>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Info className="h-4 w-4 text-gray-500" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>{param.description}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </div>
-                          ))}
-                        </div>
-                      </ScrollArea>
-                      <ScrollArea className="h-[500px] w-full md:w-1/2 rounded-md border p-4">
-                        {renderFingerprintInputs()}
-                      </ScrollArea>
+                      <div className="w-full md:w-1/2">
+                        <ScrollArea className="h-[400px] rounded-md border p-4">
+                          <div className="space-y-4">
+                            {FINGERPRINT_PARAMS.map((param) => (
+                              <div key={param.value} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`fingerprint-${param.value}`}
+                                  checked={formData.fingerprint.parameters.some((p) => p.name === param.value)}
+                                  onCheckedChange={(checked) => handleFingerprintChange(checked as boolean, param.value)}
+                                />
+                                <Label htmlFor={`fingerprint-${param.value}`} className="flex-1">{param.label}</Label>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Info className="h-4 w-4 text-gray-500" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{param.description}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                      </div>
+                      <div className="w-full md:w-1/2">
+                        <ScrollArea className="h-[400px] rounded-md border p-4">
+                          {renderFingerprintInputs()}
+                        </ScrollArea>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -566,23 +574,23 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
                     <CardDescription>Define conditions to match incoming requests.</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <ScrollArea className="h-[500px] rounded-md border p-4">
+                    <ScrollArea className="h-[400px] rounded-md border p-4">
                       {formData.requestMatch.conditions.length > 0 ? (
                         renderConditions(formData.requestMatch.conditions)
                       ) : (
                         <p className="text-center text-gray-500">No conditions added yet.</p>
                       )}
-                      <div className="mt-4 space-x-2">
-                        <Button type="button" onClick={() => addCondition(formData.requestMatch.conditions)} size="sm">
-                          <PlusCircle className="mr-2 h-4 w-4" />
-                          Add Condition
-                        </Button>
-                        <Button type="button" onClick={() => addConditionGroup(formData.requestMatch.conditions)} size="sm">
-                          <PlusCircle className="mr-2 h-4 w-4" />
-                          Add Group
-                        </Button>
-                      </div>
                     </ScrollArea>
+                    <div className="mt-4 space-x-2">
+                      <Button type="button" onClick={() => addCondition(formData.requestMatch.conditions)} size="sm">
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add Condition
+                      </Button>
+                      <Button type="button" onClick={() => addConditionGroup(formData.requestMatch.conditions)} size="sm">
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add Group
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -631,9 +639,23 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
                   </CardContent>
                 </Card>
               </TabsContent>
-            </Tabs>
-          </form>
-        </ScrollArea>
+
+              <TabsContent value="expression">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Generated Rule Expression</CardTitle>
+                    <CardDescription>This is the JSON representation of your rule configuration.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <pre className="whitespace-pre-wrap bg-muted p-4 rounded-md overflow-auto max-h-[400px]">
+                      {ruleExpression}
+                    </pre>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </div>
+          </ScrollArea>
+        </Tabs>
         <div className="flex justify-end space-x-4 p-4 bg-background border-t">
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
