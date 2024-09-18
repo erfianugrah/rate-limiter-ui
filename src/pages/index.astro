@@ -1,11 +1,12 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import RateLimitConfigurator from '../components/RateLimitConfigurator';
+import RateLimitRuleManager from '../components/RateLimitRuleManager.tsx'
 ---
 
 <Layout title="Rate Limiter Configuration">
   <main class="container mx-auto px-4 py-8">
     <h1 class="text-3xl font-bold mb-8 text-center">Rate Limit Configuration</h1>
-    <RateLimitConfigurator client:load />
+    
+    <RateLimitRuleManager client:load />
   </main>
 </Layout>

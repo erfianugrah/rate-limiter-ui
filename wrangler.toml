@@ -1,4 +1,4 @@
-name = "rate-limiter-ui"
+name = "rate-limiter-configurator"
 compatibility_date = "2024-08-21"
 
 # This is required for Pages projects

@@ -41,7 +41,7 @@ interface FingerprintParameter {
   body?: string
 }
 
-interface FormData {
+interface RuleConfig {
   id: string
   order: number
   name: string
@@ -65,9 +65,9 @@ interface FormData {
   }[]
 }
 
-const defaultFormData: FormData = {
+const defaultFormData: RuleConfig = {
   id: uuidv4(),
-  order: 1,
+  order: 0,
   name: '',
   description: '',
   rateLimit: {
@@ -86,39 +86,20 @@ const defaultFormData: FormData = {
   conditionalActions: [],
 }
 
-export default function RateLimitConfigurator() {
-  const [formData, setFormData] = useState<FormData>(defaultFormData)
-  const [generatedObject, setGeneratedObject] = useState<string>('')
-  const [message, setMessage] = useState<string>('')
-  const [isLoading, setIsLoading] = useState<boolean>(false)
-  const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true)
+interface RateLimitConfiguratorProps {
+  initialData?: RuleConfig
+  onSave: (config: RuleConfig) => void
+  onCancel: () => void
+}
+
+export default function RateLimitConfigurator({ initialData, onSave, onCancel }: RateLimitConfiguratorProps) {
+  const [formData, setFormData] = useState<RuleConfig>(initialData || defaultFormData)
 
   useEffect(() => {
-    fetchExistingConfig()
-  }, [])
-
-  const fetchExistingConfig = async () => {
-    try {
-      const response = await fetch('/api/config')
-      if (response.ok) {
-        const data: Partial<FormData> = await response.json()
-        setFormData((prevData) => ({
-          ...prevData,
-          ...data,
-          rateLimit: {
-            ...prevData.rateLimit,
-            ...data.rateLimit,
-          },
-        }))
-      } else {
-        setMessage('Failed to load existing configuration')
-      }
-    } catch (error) {
-      setMessage(`Error loading configuration: ${(error as Error).message}`)
-    } finally {
-      setIsInitialLoading(false)
+    if (initialData) {
+      setFormData(initialData)
     }
-  }
+  }, [initialData])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -470,37 +451,6 @@ export default function RateLimitConfigurator() {
     ))
   }
 
-  const generateObject = () => {
-    setGeneratedObject(JSON.stringify(formData, null, 2))
-  }
-
-  const saveConfig = async () => {
-    setIsLoading(true)
-    setMessage('')
-
-    try {
-      const response = await fetch('/api/config', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        setMessage('Config saved successfully!')
-      } else {
-        setMessage(`Failed to save config: ${data.error || 'Unknown error'}`)
-      }
-    } catch (error) {
-      setMessage(`An error occurred: ${(error as Error).message}`)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
   const handleFingerprintChange = (checked: boolean, paramValue: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -512,196 +462,164 @@ export default function RateLimitConfigurator() {
     }))
   }
 
-  if (isInitialLoading) {
-    return <div>Loading...</div>
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onSave(formData)
   }
 
   return (
     <TooltipProvider>
-      <form className="space-y-8 w-full max-w-4xl mx-auto p-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Rate Limiting Rule Configuration</CardTitle>
-            <CardDescription>
-              Configure your rate limiting rule by following these steps. Each section builds upon the previous one to create a comprehensive rule.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="basic" className="space-y-4">
-              <TabsList>
-                <TabsTrigger value="basic">Basic Info</TabsTrigger>
-                <TabsTrigger value="rateLimit">Rate Limit</TabsTrigger>
-                <TabsTrigger value="fingerprint">Fingerprint</TabsTrigger>
-                <TabsTrigger value="requestMatch">Request Match</TabsTrigger>
-                <TabsTrigger value="actions">Actions</TabsTrigger>
-              </TabsList>
+      <form onSubmit={handleSubmit} className="space-y-8 w-full">
+        <Tabs defaultValue="basic" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="basic">Basic Info</TabsTrigger>
+            <TabsTrigger value="rateLimit">Rate Limit</TabsTrigger>
+            <TabsTrigger value="fingerprint">Fingerprint</TabsTrigger>
+            <TabsTrigger value="requestMatch">Request Match</TabsTrigger>
+            <TabsTrigger value="actions">Actions</TabsTrigger>
+          </TabsList>
 
-              <TabsContent value="basic">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Basic Information</CardTitle>
-                    <CardDescription>Provide general information about the rule.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <Label htmlFor="order">{LABELS.ORDER}</Label>
-                      <Input type="number" id="order" name="order" value={formData.order} onChange={handleInputChange} />
-                    </div>
-                    <div>
-                      <Label htmlFor="name">{LABELS.RULE_NAME}</Label>
-                      <Input type="text" id="name" name="name" value={formData.name} onChange={handleInputChange} />
-                    </div>
-                    <div>
-                      <Label htmlFor="description">{LABELS.DESCRIPTION}</Label>
-                      <Textarea id="description" name="description" value={formData.description} onChange={handleInputChange} />
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+          <TabsContent value="basic">
+            <Card>
+              <CardHeader>
+                <CardTitle>Basic Information</CardTitle>
+                <CardDescription>Provide general information about the rule.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="name">{LABELS.RULE_NAME}</Label>
+                  <Input type="text" id="name" name="name" value={formData.name} onChange={handleInputChange} />
+                </div>
+                <div>
+                  <Label htmlFor="description">{LABELS.DESCRIPTION}</Label>
+                  <Textarea id="description" name="description" value={formData.description} onChange={handleInputChange} />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-              <TabsContent value="rateLimit">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Rate Limit Configuration</CardTitle>
-                    <CardDescription>Set the number of requests allowed within a specific time period.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <Label htmlFor="limit">{LABELS.REQUEST_LIMIT}</Label>
-                      <Input type="number" id="limit" name="limit" value={formData.rateLimit.limit} onChange={handleRateLimitChange} />
-                    </div>
-                    <div>
-                      <Label htmlFor="period">{LABELS.TIME_PERIOD}</Label>
-                      <Input type="number" id="period" name="period" value={formData.rateLimit.period} onChange={handleRateLimitChange} />
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+          <TabsContent value="rateLimit">
+            <Card>
+              <CardHeader>
+                <CardTitle>Rate Limit Configuration</CardTitle>
+                <CardDescription>Set the number of requests allowed within a specific time period.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="limit">{LABELS.REQUEST_LIMIT}</Label>
+                  <Input type="number" id="limit" name="limit" value={formData.rateLimit.limit} onChange={handleRateLimitChange} />
+                </div>
+                <div>
+                  <Label htmlFor="period">{LABELS.TIME_PERIOD}</Label>
+                  <Input type="number" id="period" name="period" value={formData.rateLimit.period} onChange={handleRateLimitChange} />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-              <TabsContent value="fingerprint">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>{LABELS.FINGERPRINT_PARAMS}</CardTitle>
-                    <CardDescription>Select the parameters to use for identifying unique requests.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ScrollArea className="h-[200px] w-full border rounded-md">
-                      {FINGERPRINT_PARAMS.map((param, index) => (
-                        <div key={`fingerprint-${param.value}-${index}`} className="flex items-center space-x-2 p-2">
-                          <Checkbox
-                            id={`fingerprint-${param.value}-${index}`}
-                            checked={formData.fingerprint.parameters.some((p) => p.name === param.value)}
-                            onCheckedChange={(checked) => handleFingerprintChange(checked === true, param.value)}
-                          />
-                          <Label htmlFor={`fingerprint-${param.value}-${index}`}>{param.label}</Label>
-                          <Tooltip>
-                            <TooltipTrigger>
-                              <Info className="h-4 w-4" />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{(param as any).description || 'No description available'}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
+          <TabsContent value="fingerprint">
+            <Card>
+              <CardHeader>
+                <CardTitle>{LABELS.FINGERPRINT_PARAMS}</CardTitle>
+                <CardDescription>Select the parameters to use for identifying unique requests.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[200px] w-full border rounded-md">
+                  {FINGERPRINT_PARAMS.map((param, index) => (
+                    <div key={`fingerprint-${param.value}-${index}`} className="flex items-center space-x-2 p-2">
+                      <Checkbox
+                        id={`fingerprint-${param.value}-${index}`}
+                        checked={formData.fingerprint.parameters.some((p) => p.name === param.value)}
+                        onCheckedChange={(checked) => handleFingerprintChange(checked === true, param.value)}
+                      />
+                      <Label htmlFor={`fingerprint-${param.value}-${index}`}>{param.label}</Label>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-4 w-4" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{(param as any).description || 'No description available'}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  ))}
+                </ScrollArea>
+                {renderFingerprintInputs()}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="requestMatch">
+            <Card>
+              <CardHeader>
+                <CardTitle>{LABELS.REQUEST_MATCH}</CardTitle>
+                <CardDescription>Define conditions to match requests for rate limiting.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {renderConditions(formData.requestMatch.conditions)}
+                <div className="mt-4">
+                  <Button type="button" onClick={() => addCondition(formData.requestMatch.conditions)} className="mr-2">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Condition
+                  </Button>
+                  <Button type="button" onClick={() => addConditionGroup(formData.requestMatch.conditions)}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Group
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="actions">
+            <Card>
+              <CardHeader>
+                <CardTitle>Actions</CardTitle>
+                <CardDescription>Configure the default action and conditional actions to take when the rate limit is reached.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label>Default Action</Label>
+                  <Select
+                    value={formData.action.type}
+                    onValueChange={(value) => setFormData((prev) => ({ ...prev, action: { type: value } }))}
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Select action type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ACTION_TYPES.map((action, idx) => (
+                        <SelectItem key={`action-${action.value}-${idx}`} value={action.value}>
+                          {action.label}
+                        </SelectItem>
                       ))}
-                    </ScrollArea>
-                    {renderFingerprintInputs()}
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Conditional Actions</Label>
+                  <CardDescription className="mb-4">
+                    Define additional actions to take based on specific conditions when the rate limit is reached.
+                  </CardDescription>
+                  {renderConditionalActions()}
+                  <Button type="button" onClick={addConditionalAction} className="mt-4">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Conditional Action
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
 
-              <TabsContent value="requestMatch">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>{LABELS.REQUEST_MATCH}</CardTitle>
-                    <CardDescription>Define conditions to match requests for rate limiting.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {renderConditions(formData.requestMatch.conditions)}
-                    <div className="mt-4">
-                      <Button type="button" onClick={() => addCondition(formData.requestMatch.conditions)} className="mr-2">
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Add Condition
-                      </Button>
-                      <Button type="button" onClick={() => addConditionGroup(formData.requestMatch.conditions)}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Add Group
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="actions">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Actions</CardTitle>
-                    <CardDescription>Configure the default action and conditional actions to take when the rate limit is reached.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <Label>Default Action</Label>
-                      <Select
-                        value={formData.action.type}
-                        onValueChange={(value) => setFormData((prev) => ({ ...prev, action: { type: value } }))}
-                      >
-                        <SelectTrigger className="w-[180px]">
-                          <SelectValue placeholder="Select action type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ACTION_TYPES.map((action, idx) => (
-                            <SelectItem key={`action-${action.value}-${idx}`} value={action.value}>
-                              {action.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>Conditional Actions</Label>
-                      <CardDescription className="mb-4">
-                        Define additional actions to take based on specific conditions when the rate limit is reached.
-                      </CardDescription>
-                      {renderConditionalActions()}
-                      <Button type="button" onClick={addConditionalAction} className="mt-4">
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Add Conditional Action
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-
-        <div className="flex space-x-2">
-          <Button type="button" onClick={generateObject}>
-            Generate Object
+        <div className="flex justify-end space-x-2">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
           </Button>
-          <Button type="button" onClick={saveConfig} disabled={isLoading}>
-            {isLoading ? 'Saving...' : 'Save Config'}
+          <Button type="submit">
+            Save Rule
           </Button>
         </div>
-
-        {generatedObject && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Rule Expression</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <pre className="bg-gray-100 p-4 rounded-md overflow-x-auto">
-                <code>{generatedObject}</code>
-              </pre>
-            </CardContent>
-          </Card>
-        )}
-
-        {message && (
-          <p className={`text-${message.includes('success') ? 'green' : 'red'}-600`}>
-            {message}
-          </p>
-        )}
       </form>
     </TooltipProvider>
   )
