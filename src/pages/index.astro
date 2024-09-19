@@ -3,28 +3,67 @@ import Layout from '../layouts/Layout.astro';
 import RateLimitRuleManager from '../components/RateLimitRuleManager';
 ---
 
-<Layout title="Rate Limit Rule Manager">
-	<main class="container mx-auto p-4">
-		<h1 class="text-2xl font-bold mb-4">Rate Limit Rule Manager</h1>
+<Layout title="The Rate Limit Rule Configurator">
+	<main class="container mx-auto p-4 min-h-screen">
+		<h1 class="text-4xl font-bold mb-8 text-center">The Rate Limit Rule Configurator</h1>
 		<RateLimitRuleManager client:load />
 	</main>
 </Layout>
 
 <style>
+  /* These styles will be applied globally */
+  :root {
+    --text-color: #333;
+    --bg-color: #f4f4f4;
+  }
+
+  .dark {
+    --text-color: #f4f4f4;
+    --bg-color: #333;
+  }
+
+  body {
+    color: var(--text-color);
+    background-color: var(--bg-color);
+    transition: color 0.3s ease, background-color 0.3s ease;
+  }
+
   main {
     margin: auto;
     padding: 1rem;
-    width: 800px;
-    max-width: calc(100% - 2rem);
-    color: white;
-    font-size: 20px;
+    width: 100%;
+    max-width: 1200px;
+    font-size: 16px;
     line-height: 1.6;
   }
+
   h1 {
-    font-size: 4rem;
-    font-weight: 700;
-    line-height: 1;
-    text-align: center;
     margin-bottom: 1em;
   }
+
+  @media (max-width: 768px) {
+    h1 {
+      font-size: 2.5rem;
+    }
+  }
 </style>
+
+<script>
+  // Check for saved theme preference or use system preference
+  const theme = localStorage.getItem('theme') || 
+    (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  
+  document.documentElement.classList.toggle('dark', theme === 'dark');
+
+  // Function to toggle theme
+  function toggleTheme() {
+    const isDark = document.documentElement.classList.toggle('dark');
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+  }
+
+  // Add event listener to theme toggle button (if you have one)
+  const themeToggle = document.getElementById('theme-toggle');
+  if (themeToggle) {
+    themeToggle.addEventListener('click', toggleTheme);
+  }
+</script>
