@@ -1,12 +1,27 @@
 // functions/api/config.js
 
 export async function onRequestGet(context) {
-  const { env } = context;
+  const { env, request } = context;
+  const url = new URL(request.url);
+  const path = url.pathname;
   const configStorageId = env.CONFIG_STORAGE.idFromName('global');
   const configStorage = env.CONFIG_STORAGE.get(configStorageId);
 
-  const config = await configStorage.fetch('https://rate-limiter-ui/config');
-  return new Response(await config.text(), {
+  let response;
+  if (path === '/api/config') {
+    response = await configStorage.fetch('https://rate-limiter-ui/config');
+  } else if (path.startsWith('/api/config/rules/')) {
+    const ruleId = path.split('/').pop();
+    response = await configStorage.fetch(`https://rate-limiter-ui/rules/${ruleId}`);
+  } else {
+    return new Response(JSON.stringify({ error: 'Not found' }), {
+      status: 404,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  return new Response(await response.text(), {
+    status: response.status,
     headers: { 'Content-Type': 'application/json' },
   });
 }
@@ -23,13 +38,13 @@ export async function onRequestPost(context) {
     const configStorage = env.CONFIG_STORAGE.get(configStorageId);
     console.log('Retrieved ConfigStorage object');
 
-    const newRules = await request.json();
-    console.log('Parsed request body:', JSON.stringify(newRules));
+    const newConfig = await request.json();
+    console.log('Parsed request body:', JSON.stringify(newConfig));
 
     const response = await configStorage.fetch('https://rate-limiter-ui/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newRules),
+      body: JSON.stringify(newConfig),
     });
     console.log('Received response from ConfigStorage:', response.status);
 
@@ -52,12 +67,13 @@ export async function onRequestPost(context) {
   }
 }
 
-// New function to handle rule reordering
 export async function onRequestPut(context) {
   const { env, request } = context;
+  const url = new URL(request.url);
+  const path = url.pathname;
 
   try {
-    console.log('Received PUT request to /api/config');
+    console.log('Received PUT request to', path);
 
     const configStorageId = env.CONFIG_STORAGE.idFromName('global');
     console.log('ConfigStorage ID:', configStorageId);
@@ -65,14 +81,30 @@ export async function onRequestPut(context) {
     const configStorage = env.CONFIG_STORAGE.get(configStorageId);
     console.log('Retrieved ConfigStorage object');
 
-    const updatedRules = await request.json();
-    console.log('Parsed request body:', JSON.stringify(updatedRules));
+    const updatedData = await request.json();
+    console.log('Parsed request body:', JSON.stringify(updatedData));
 
-    const response = await configStorage.fetch('https://rate-limiter-ui/config/reorder', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updatedRules),
-    });
+    let response;
+    if (path === '/api/config/reorder') {
+      response = await configStorage.fetch('https://rate-limiter-ui/config/reorder', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedData),
+      });
+    } else if (path.startsWith('/api/config/rules/')) {
+      const ruleId = path.split('/').pop();
+      response = await configStorage.fetch(`https://rate-limiter-ui/rules/${ruleId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedData),
+      });
+    } else {
+      return new Response(JSON.stringify({ error: 'Not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     console.log('Received response from ConfigStorage:', response.status);
 
     const responseBody = await response.text();
@@ -84,6 +116,53 @@ export async function onRequestPut(context) {
     });
   } catch (error) {
     console.error('Error in onRequestPut:', error);
+    return new Response(
+      JSON.stringify({ error: 'Internal Server Error', details: error.message }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  }
+}
+
+export async function onRequestDelete(context) {
+  const { env, request } = context;
+  const url = new URL(request.url);
+  const path = url.pathname;
+
+  try {
+    console.log('Received DELETE request to', path);
+
+    const configStorageId = env.CONFIG_STORAGE.idFromName('global');
+    console.log('ConfigStorage ID:', configStorageId);
+
+    const configStorage = env.CONFIG_STORAGE.get(configStorageId);
+    console.log('Retrieved ConfigStorage object');
+
+    if (path.startsWith('/api/config/rules/')) {
+      const ruleId = path.split('/').pop();
+      const response = await configStorage.fetch(`https://rate-limiter-ui/rules/${ruleId}`, {
+        method: 'DELETE',
+      });
+
+      console.log('Received response from ConfigStorage:', response.status);
+
+      const responseBody = await response.text();
+      console.log('Response body:', responseBody);
+
+      return new Response(responseBody, {
+        status: response.status,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } else {
+      return new Response(JSON.stringify({ error: 'Not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+  } catch (error) {
+    console.error('Error in onRequestDelete:', error);
     return new Response(
       JSON.stringify({ error: 'Internal Server Error', details: error.message }),
       {
