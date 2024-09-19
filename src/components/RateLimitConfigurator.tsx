@@ -49,22 +49,22 @@ interface ConditionalAction {
 }
 
 interface RuleConfig {
-  id: string
-  order: number
-  name: string
-  description: string
+  id: string;
+  order: number;
+  name: string;
+  description: string;
   rateLimit: {
-    limit: number
-    period: number
-  }
+    limit: number;
+    period: number;
+  };
   fingerprint: {
-    parameters: FingerprintParameter[]
-  }
-  initialMatch: ConditionalAction
+    parameters: FingerprintParameter[];
+  };
+  initialMatch: ConditionalAction;
   elseAction: {
-    type: string
-  }
-  elseIfActions: ConditionalAction[]
+    type: string;
+  };
+  elseIfActions: ConditionalAction[];
 }
 
 const defaultFormData: RuleConfig = {
@@ -83,15 +83,13 @@ const defaultFormData: RuleConfig = {
     conditions: [],
     action: { type: 'rateLimit' },
   },
-  elseAction: {
-    type: 'allow',
-  },
+  elseAction: { type: 'allow' },
   elseIfActions: [],
-}
+};
 
 interface RateLimitConfiguratorProps {
   initialData?: RuleConfig
-  onSave: (config: RuleConfig) => void
+  onSave: (config: RuleConfig) => Promise<void>
   onCancel: () => void
 }
 
@@ -115,7 +113,7 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
         ...prev,
         ...initialData,
         initialMatch: initialData.initialMatch || prev.initialMatch,
-        elseAction: initialData.elseAction || prev.elseAction,
+        elseAction: initialData.elseAction,
         elseIfActions: initialData.elseIfActions || prev.elseIfActions,
       }))
     }
@@ -411,14 +409,29 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
     }))
   }
 
+const removeElse = () => {
+  setFormData((prev) => ({
+    ...prev,
+    elseAction: { type: 'allow' },
+    elseIfActions: [],
+  }));
+};
+
   const removeElseIfAction = (index: number) => {
     setFormData((prev) => ({
       ...prev,
-      elseIfActions: prev.elseIfActions.filter((_: ConditionalAction, i: number) => i !== index),
+      elseIfActions: prev.elseIfActions.filter((_, i) => i !== index),
     }))
   }
 
-  const renderConditionalActions =  () => {
+  const addElse = () => {
+    setFormData((prev) => ({
+      ...prev,
+      elseAction: { type: 'allow' },
+    }))
+  }
+
+  const renderConditionalActions = () => {
     return (
       <>
         <Card className="mt-4">
@@ -521,45 +534,74 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
           </Card>
         ))}
 
+        {formData.elseAction ? (
+          <Card className="mt-4">
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-lg font-semibold">Else Action</CardTitle>
+                <Button onClick={removeElse} variant="destructive" size="sm">
+                  Remove Else
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div>
+                <Label>Action</Label>
+                <Select
+                  value={formData.elseAction.type}
+                  onValueChange={(value) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      elseAction: { type: value },
+                    }))
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select action type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ACTION_TYPES.map((action, idx) => (
+                      <SelectItem key={`action-${action.value}-${idx}`} value={action.value}>
+                        {action.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="mt-4">
+            <Button onClick={addElse} size="sm">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add Else Action
+            </Button>
+          </div>
+        )}
+
+        {formData.elseAction && (
+          <div className="mt-4">
+            <Button onClick={addElseIfAction} size="sm">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add Else If Condition
+            </Button>
+          </div>
+        )}
+
         <Card className="mt-4">
           <CardHeader>
-            <div className="flex justify-between items-center">
-              <CardTitle className="text-lg font-semibold">Else Action</CardTitle>
-              {formData.elseAction.type && (
-                <Button 
-                  onClick={() => setFormData(prev => ({ ...prev, elseAction: { type: '' } }))} 
-                  variant="destructive" 
-                  size="sm"
-                >
-                  Remove
-                </Button>
-              )}
-            </div>
+            <CardTitle className="text-lg font-semibold">Rule Logic Structure</CardTitle>
           </CardHeader>
           <CardContent>
-            <div>
-              <Label>Action</Label>
-              <Select
-                value={formData.elseAction.type}
-                onValueChange={(value) => {
-                  setFormData((prev) => ({
-                    ...prev,
-                    elseAction: { type: value },
-                  }))
-                }}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select action type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ACTION_TYPES.map((action, idx) => (
-                    <SelectItem key={`action-${action.value}-${idx}`} value={action.value}>
-                      {action.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <p className="text-sm text-gray-600">
+              The rule logic follows this structure:
+              <br />
+              1. Initial Match (If): This is always present and defines the primary condition and action.
+              <br />
+              2. Else If Conditions: These are optional and can be added only if an Else action is present. They provide additional conditions and actions.
+              <br />
+              3. Else Action: This is optional. If present, it defines the action to take when no other conditions are met. If not present, no action will be taken for requests that don't match any conditions.
+            </p>
           </CardContent>
         </Card>
       </>
@@ -591,7 +633,7 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
             <TabsTrigger value="basic">Basic Info</TabsTrigger>
             <TabsTrigger value="rateLimit">Rate Limit</TabsTrigger>
             <TabsTrigger value="fingerprint">Fingerprint</TabsTrigger>
-            <TabsTrigger value="conditionalActions">Conditional Actions</TabsTrigger>
+            <TabsTrigger value="ruleLogic">Rule Logic</TabsTrigger>
             <TabsTrigger value="expression">Rule Expression</TabsTrigger>
           </TabsList>
 
@@ -677,10 +719,10 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
                 </Card>
               </TabsContent>
 
-              <TabsContent value="conditionalActions">
+              <TabsContent value="ruleLogic">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Conditional Actions Configuration</CardTitle>
+                    <CardTitle>Rule Logic Configuration</CardTitle>
                     <CardDescription>Configure the request match and conditional actions.</CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -688,10 +730,6 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
                       <ScrollArea className="h-[400px] rounded-md border p-4">
                         {renderConditionalActions()}
                       </ScrollArea>
-                      <Button type="button" onClick={addElseIfAction} size="sm" className="w-full">
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Add Else If Condition
-                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -714,10 +752,13 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
           </ScrollArea>
         </Tabs>
         <div className="flex justify-end space-x-4 p-4 bg-background border-t">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button onClick={(e) => { e.preventDefault(); onSave(formData); }}>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+          <Button onClick={async (e) => { 
+            e.preventDefault(); 
+            await onSave(formData); 
+          }}>
             Save Configuration
           </Button>
         </div>

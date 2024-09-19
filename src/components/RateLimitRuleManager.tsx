@@ -77,7 +77,7 @@ function SortableItem({ id, rule, onEdit, onDelete, isLoading }: SortableItemPro
         <CardContent>
           <div className="flex justify-between items-center">
             <p className="text-sm">
-              Rate Limit: {rule.rateLimit.limit} requests per {rule.rateLimit.period} {rule.rateLimit.period === 1 ? 'second' : 'seconds'}
+              Rate Limit: {rule.rateLimit.limit} requests per {rule.rateLimit.period} seconds
             </p>
             <div className="flex space-x-2">
               <Button variant="outline" size="sm" onClick={() => onEdit(rule)} disabled={isLoading}>
@@ -110,7 +110,7 @@ function SortableItem({ id, rule, onEdit, onDelete, isLoading }: SortableItemPro
   );
 }
 
-export default function RateLimitRuleManager(): JSX.Element {
+export default function RateLimitRuleManager() {
   const { rules, isLoading, fetchRules, addRule, updateRule, deleteRule, reorderRules } = useRuleStore()
   const [editingRule, setEditingRule] = useState<RuleConfig | null>(null)
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
@@ -163,30 +163,27 @@ export default function RateLimitRuleManager(): JSX.Element {
     }
   }, [deleteRule, toast])
 
-  const handleSaveRule = useCallback((ruleConfig: RuleConfig): void => {
-    const saveRule = async () => {
-      try {
-        if (editingRule) {
-          await updateRule(ruleConfig)
-        } else {
-          const { id, order, ...newRule } = ruleConfig
-          await addRule(newRule)
-        }
-        setIsModalOpen(false)
-        toast({
-          title: "Success",
-          description: editingRule ? "Rule updated successfully." : "New rule added successfully.",
-        })
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: `Failed to save rule: ${(error as Error).message}`,
-          variant: "destructive",
-        })
-      }
+const handleSaveRule = useCallback(async (config: RuleConfig): Promise<void> => {
+  try {
+    if (editingRule) {
+      await updateRule(config)
+    } else {
+      const { id, order, ...newRule } = config
+      await addRule(newRule as Omit<RuleConfig, 'id' | 'order'>)
     }
-    saveRule()
-  }, [editingRule, updateRule, addRule, toast])
+    setIsModalOpen(false)
+    toast({
+      title: "Success",
+      description: editingRule ? "Rule updated successfully." : "New rule added successfully.",
+    })
+  } catch (error) {
+    toast({
+      title: "Error",
+      description: `Failed to save rule: ${(error as Error).message}`,
+      variant: "destructive",
+    })
+  }
+}, [editingRule, updateRule, addRule, toast])
 
   const handleDragEnd = useCallback(async (event: DragEndEvent): Promise<void> => {
     const {active, over} = event;
