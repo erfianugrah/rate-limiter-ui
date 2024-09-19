@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { PlusCircle, Edit, Trash2, GripVertical } from 'lucide-react'
+import { PlusCircle, Edit, Trash2, GripVertical, Moon, Sun } from 'lucide-react'
 import RateLimitConfigurator from './RateLimitConfigurator'
 import { useToast } from "@/components/ui/use-toast"
 import {
@@ -115,6 +115,7 @@ export default function RateLimitRuleManager() {
   const [editingRule, setEditingRule] = useState<RuleConfig | null>(null)
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
   const { toast } = useToast()
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark')
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -163,27 +164,27 @@ export default function RateLimitRuleManager() {
     }
   }, [deleteRule, toast])
 
-const handleSaveRule = useCallback(async (config: RuleConfig): Promise<void> => {
-  try {
-    if (editingRule) {
-      await updateRule(config)
-    } else {
-      const { id, order, ...newRule } = config
-      await addRule(newRule as Omit<RuleConfig, 'id' | 'order'>)
+  const handleSaveRule = useCallback(async (config: RuleConfig): Promise<void> => {
+    try {
+      if (editingRule) {
+        await updateRule(config)
+      } else {
+        const { id, order, ...newRule } = config
+        await addRule(newRule as Omit<RuleConfig, 'id' | 'order'>)
+      }
+      setIsModalOpen(false)
+      toast({
+        title: "Success",
+        description: editingRule ? "Rule updated successfully." : "New rule added successfully.",
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to save rule: ${(error as Error).message}`,
+        variant: "destructive",
+      })
     }
-    setIsModalOpen(false)
-    toast({
-      title: "Success",
-      description: editingRule ? "Rule updated successfully." : "New rule added successfully.",
-    })
-  } catch (error) {
-    toast({
-      title: "Error",
-      description: `Failed to save rule: ${(error as Error).message}`,
-      variant: "destructive",
-    })
-  }
-}, [editingRule, updateRule, addRule, toast])
+  }, [editingRule, updateRule, addRule, toast])
 
   const handleDragEnd = useCallback(async (event: DragEndEvent): Promise<void> => {
     const {active, over} = event;
@@ -210,9 +211,31 @@ const handleSaveRule = useCallback(async (config: RuleConfig): Promise<void> => 
     }
   }, [rules, reorderRules, toast])
 
+  const toggleTheme = () => {
+    setTheme(prevTheme => {
+      const newTheme = prevTheme === 'light' ? 'dark' : 'light'
+      document.documentElement.classList.toggle('dark', newTheme === 'dark')
+      localStorage.setItem('theme', newTheme)
+      return newTheme
+    })
+  }
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light')
+    setTheme(initialTheme)
+    document.documentElement.classList.toggle('dark', initialTheme === 'dark')
+  }, [])
+
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Rate Limit Rules</h1>
+    <div className="container mx-auto p-4 min-h-screen">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">Rate Limit Rules</h1>
+        <Button onClick={toggleTheme} variant="outline" size="icon">
+          {theme === 'light' ? <Moon className="h-[1.2rem] w-[1.2rem]" /> : <Sun className="h-[1.2rem] w-[1.2rem]" />}
+        </Button>
+      </div>
       <Button onClick={handleAddRule} className="mb-4" disabled={isLoading}>
         <PlusCircle className="mr-2 h-4 w-4" /> Add New Rule
       </Button>
@@ -242,19 +265,21 @@ const handleSaveRule = useCallback(async (config: RuleConfig): Promise<void> => 
         <p>No rules found. Add a new rule to get started.</p>
       )}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
+        <DialogContent className="max-w-[90vw] w-full max-h-[100vh] p-0">
+          <DialogHeader className="px-6 py-4">
             <DialogTitle>{editingRule ? 'Edit Rule' : 'Add New Rule'}</DialogTitle>
             <DialogDescription>
               {editingRule ? 'Modify the existing rate limit rule.' : 'Create a new rate limit rule.'}
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="max-h-[80vh]">
-            <RateLimitConfigurator
-              initialData={editingRule || undefined}
-              onSave={handleSaveRule}
-              onCancel={() => setIsModalOpen(false)}
-            />
+          <ScrollArea className="max-h-[calc(98vh-120px)]">
+            <div className="p-6">
+              <RateLimitConfigurator
+                initialData={editingRule || undefined}
+                onSave={handleSaveRule}
+                onCancel={() => setIsModalOpen(false)}
+              />
+            </div>
           </ScrollArea>
         </DialogContent>
       </Dialog>

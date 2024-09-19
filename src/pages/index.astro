@@ -10,22 +10,59 @@ import RateLimitRuleManager from '../components/RateLimitRuleManager';
 	</main>
 </Layout>
 
-<style>
-  /* These styles will be applied globally */
+<style is:global>
   :root {
-    --text-color: #333;
-    --bg-color: #f4f4f4;
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+    --radius: 0.5rem;
   }
 
   .dark {
-    --text-color: #f4f4f4;
-    --bg-color: #333;
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
   }
+</style>
 
+<style>
   body {
-    color: var(--text-color);
-    background-color: var(--bg-color);
-    transition: color 0.3s ease, background-color 0.3s ease;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   main {
@@ -49,21 +86,18 @@ import RateLimitRuleManager from '../components/RateLimitRuleManager';
 </style>
 
 <script>
-  // Check for saved theme preference or use system preference
-  const theme = localStorage.getItem('theme') || 
-    (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-  
-  document.documentElement.classList.toggle('dark', theme === 'dark');
-
-  // Function to toggle theme
-  function toggleTheme() {
-    const isDark = document.documentElement.classList.toggle('dark');
-    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+  // This script runs on the client-side
+  function setInitialTheme() {
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
+    
+    document.documentElement.classList.toggle('dark', initialTheme === 'dark');
   }
 
-  // Add event listener to theme toggle button (if you have one)
-  const themeToggle = document.getElementById('theme-toggle');
-  if (themeToggle) {
-    themeToggle.addEventListener('click', toggleTheme);
-  }
+  // Set initial theme when the script loads
+  setInitialTheme();
+
+  // Listen for changes to color scheme preferences
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', setInitialTheme);
 </script>
