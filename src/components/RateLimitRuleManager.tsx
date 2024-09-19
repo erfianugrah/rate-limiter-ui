@@ -128,15 +128,21 @@ export default function RateLimitRuleManager() {
     })
   );
 
-  useEffect(() => {
-    fetchRules().catch((error: Error) => {
-      toast({
-        title: "Error",
-        description: `Failed to fetch rules: ${error.message}`,
-        variant: "destructive",
-      })
+useEffect(() => {
+  fetchRules().catch((error: Error) => {
+    console.error('Error fetching rules:', error);
+    toast({
+      title: "Error",
+      description: `Failed to fetch rules: ${error.message}`,
+      variant: "destructive",
     })
-  }, [fetchRules, toast])
+  })
+}, [fetchRules, toast])
+
+// Add this logging
+useEffect(() => {
+  console.log('Current rules in component:', rules);
+}, [rules]);
 
   const handleAddRule = useCallback((): void => {
     setEditingRule(null)
@@ -164,27 +170,29 @@ export default function RateLimitRuleManager() {
     }
   }, [deleteRule, toast])
 
-  const handleSaveRule = useCallback(async (config: RuleConfig): Promise<void> => {
-    try {
-      if (editingRule) {
-        await updateRule(config)
-      } else {
-        const { id, order, ...newRule } = config
-        await addRule(newRule as Omit<RuleConfig, 'id' | 'order'>)
-      }
-      setIsModalOpen(false)
-      toast({
-        title: "Success",
-        description: editingRule ? "Rule updated successfully." : "New rule added successfully.",
-      })
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: `Failed to save rule: ${(error as Error).message}`,
-        variant: "destructive",
-      })
+const handleSaveRule = useCallback(async (config: RuleConfig): Promise<void> => {
+  try {
+    if (editingRule) {
+      await updateRule(config)
+    } else {
+      const { id, order, ...newRule } = config
+      await addRule(newRule as Omit<RuleConfig, 'id' | 'order'>)
     }
-  }, [editingRule, updateRule, addRule, toast])
+    setIsModalOpen(false)
+    toast({
+      title: "Success",
+      description: editingRule ? "Rule updated successfully." : "New rule added successfully.",
+    })
+    // Fetch rules after saving
+    await fetchRules()
+  } catch (error) {
+    toast({
+      title: "Error",
+      description: `Failed to save rule: ${(error as Error).message}`,
+      variant: "destructive",
+    })
+  }
+}, [editingRule, updateRule, addRule, fetchRules, toast])
 
   const handleDragEnd = useCallback(async (event: DragEndEvent): Promise<void> => {
     const {active, over} = event;

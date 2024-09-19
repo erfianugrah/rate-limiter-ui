@@ -7,7 +7,9 @@ export async function onRequestGet(context) {
 
   let response;
   if (path === '/api/config') {
+    console.log('Fetching config from ConfigStorage');
     response = await configStorage.fetch('https://rate-limit-configurator/config');
+    console.log('Received response from ConfigStorage:', response.status);
   } else if (path.startsWith('/api/config/rules/')) {
     const ruleId = path.split('/').pop();
     response = await configStorage.fetch(`https://rate-limit-configurator/rules/${ruleId}`);
@@ -18,7 +20,10 @@ export async function onRequestGet(context) {
     });
   }
 
-  return new Response(await response.text(), {
+  const responseBody = await response.text();
+  console.log('Response body from ConfigStorage:', responseBody);
+
+  return new Response(responseBody, {
     status: response.status,
     headers: { 'Content-Type': 'application/json' },
   });
