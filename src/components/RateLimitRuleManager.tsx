@@ -77,7 +77,7 @@ function SortableItem({ id, rule, onEdit, onDelete, isLoading }: SortableItemPro
         <CardContent>
           <div className="flex justify-between items-center">
             <p className="text-sm">
-              Rate Limit: {rule.rateLimit.limit} requests per {rule.rateLimit.period} seconds
+              Rate Limit: {rule.rateLimit.limit} requests per {rule.rateLimit.period} {rule.rateLimit.period === 1 ? 'second' : 'seconds'}
             </p>
             <div className="flex space-x-2">
               <Button variant="outline" size="sm" onClick={() => onEdit(rule)} disabled={isLoading}>

@@ -411,14 +411,14 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
     }))
   }
 
-const removeElseIfAction = (index: number) => {
-  setFormData((prev) => ({
-    ...prev,
-    elseIfActions: prev.elseIfActions.filter((_: ConditionalAction, i: number) => i !== index),
-  }))
-}
+  const removeElseIfAction = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      elseIfActions: prev.elseIfActions.filter((_: ConditionalAction, i: number) => i !== index),
+    }))
+  }
 
-  const renderConditionalActions = () => {
+  const renderConditionalActions =  () => {
     return (
       <>
         <Card className="mt-4">
@@ -523,7 +523,18 @@ const removeElseIfAction = (index: number) => {
 
         <Card className="mt-4">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold">Else Action</CardTitle>
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-lg font-semibold">Else Action</CardTitle>
+              {formData.elseAction.type && (
+                <Button 
+                  onClick={() => setFormData(prev => ({ ...prev, elseAction: { type: '' } }))} 
+                  variant="destructive" 
+                  size="sm"
+                >
+                  Remove
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             <div>
