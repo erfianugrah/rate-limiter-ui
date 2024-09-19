@@ -25,49 +25,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useRuleStore } from '@/store/ruleStore'
-
-interface Condition {
-  field: string
-  operator: string
-  value: string
-  headerName?: string
-  headerValue?: string
-}
-
-interface ConditionGroup {
-  conditions: (Condition | ConditionGroup | { type: 'operator'; logic: string })[]
-}
-
-interface FingerprintParameter {
-  name: string
-  headerName?: string
-  headerValue?: string
-  body?: string
-}
-
-interface RuleConfig {
-  id: string
-  order: number
-  name: string
-  description: string
-  rateLimit: {
-    limit: number
-    period: number
-  }
-  requestMatch: ConditionGroup
-  action: {
-    type: string
-  }
-  fingerprint: {
-    parameters: FingerprintParameter[]
-  }
-  conditionalActions: {
-    conditions: (Condition | ConditionGroup | { type: 'operator'; logic: string })[]
-    action: {
-      type: string
-    }
-  }[]
-}
+import type { RuleConfig } from '@/store/ruleStore'
 
 interface SortableItemProps {
   id: string
@@ -205,35 +163,39 @@ export default function RateLimitRuleManager(): JSX.Element {
     }
   }, [deleteRule, toast])
 
-  const handleSaveRule = useCallback(async (ruleConfig: RuleConfig): Promise<void> => {
-    try {
-      if (editingRule) {
-        await updateRule(ruleConfig)
-      } else {
-        await addRule(ruleConfig)
+  const handleSaveRule = useCallback((ruleConfig: RuleConfig): void => {
+    const saveRule = async () => {
+      try {
+        if (editingRule) {
+          await updateRule(ruleConfig)
+        } else {
+          const { id, order, ...newRule } = ruleConfig
+          await addRule(newRule)
+        }
+        setIsModalOpen(false)
+        toast({
+          title: "Success",
+          description: editingRule ? "Rule updated successfully." : "New rule added successfully.",
+        })
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: `Failed to save rule: ${(error as Error).message}`,
+          variant: "destructive",
+        })
       }
-      setIsModalOpen(false)
-      toast({
-        title: "Success",
-        description: editingRule ? "Rule updated successfully." : "New rule added successfully.",
-      })
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: `Failed to save rule: ${(error as Error).message}`,
-        variant: "destructive",
-      })
     }
+    saveRule()
   }, [editingRule, updateRule, addRule, toast])
 
   const handleDragEnd = useCallback(async (event: DragEndEvent): Promise<void> => {
     const {active, over} = event;
 
     if (active.id !== over?.id) {
-      const oldIndex = rules.findIndex((item: RuleConfig) => item.id === active.id);
-      const newIndex = rules.findIndex((item: RuleConfig) => item.id === over?.id);
+      const oldIndex = rules.findIndex((item) => item.id === active.id);
+      const newIndex = rules.findIndex((item) => item.id === over?.id);
       
-      const newRules = arrayMove(rules, oldIndex, newIndex).map((rule: RuleConfig, index: number) => ({ ...rule, order: index }));
+      const newRules = arrayMove(rules, oldIndex, newIndex).map((rule, index) => ({ ...rule, order: index }));
       
       try {
         await reorderRules(newRules)
@@ -264,10 +226,10 @@ export default function RateLimitRuleManager(): JSX.Element {
           onDragEnd={handleDragEnd}
         >
           <SortableContext 
-            items={rules.map((rule: RuleConfig) => rule.id)}
+            items={rules.map((rule) => rule.id)}
             strategy={verticalListSortingStrategy}
           >
-            {rules.map((rule: RuleConfig) => (
+            {rules.map((rule) => (
               <SortableItem 
                 key={rule.id} 
                 id={rule.id}

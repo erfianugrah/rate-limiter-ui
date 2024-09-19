@@ -20,7 +20,14 @@ interface FingerprintParameter {
   body?: string;
 }
 
-interface RuleConfig {
+interface ConditionalAction {
+  conditions: (Condition | ConditionGroup | { type: 'operator'; logic: string })[];
+  action: {
+    type: string;
+  };
+}
+
+export interface RuleConfig {
   id: string;
   order: number;
   name: string;
@@ -29,19 +36,14 @@ interface RuleConfig {
     limit: number;
     period: number;
   };
-  requestMatch: ConditionGroup;
-  action: {
-    type: string;
-  };
   fingerprint: {
     parameters: FingerprintParameter[];
   };
-  conditionalActions: {
-    conditions: (Condition | ConditionGroup | { type: 'operator'; logic: string })[];
-    action: {
-      type: string;
-    };
-  }[];
+  initialMatch: ConditionalAction;
+  elseAction: {
+    type: string;
+  };
+  elseIfActions: ConditionalAction[];
 }
 
 interface RuleStore {

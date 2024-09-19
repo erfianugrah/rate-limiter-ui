@@ -41,6 +41,13 @@ interface FingerprintParameter {
   body?: string
 }
 
+interface ConditionalAction {
+  conditions: (Condition | ConditionGroup | { type: 'operator'; logic: string })[]
+  action: {
+    type: string
+  }
+}
+
 interface RuleConfig {
   id: string
   order: number
@@ -50,19 +57,14 @@ interface RuleConfig {
     limit: number
     period: number
   }
-  requestMatch: ConditionGroup
-  action: {
-    type: string
-  }
   fingerprint: {
     parameters: FingerprintParameter[]
   }
-  conditionalActions: {
-    conditions: (Condition | ConditionGroup | { type: 'operator'; logic: string })[]
-    action: {
-      type: string
-    }
-  }[]
+  initialMatch: ConditionalAction
+  elseAction: {
+    type: string
+  }
+  elseIfActions: ConditionalAction[]
 }
 
 const defaultFormData: RuleConfig = {
@@ -74,16 +76,17 @@ const defaultFormData: RuleConfig = {
     limit: 0,
     period: 0,
   },
-  requestMatch: {
-    conditions: [],
-  },
-  action: {
-    type: 'rateLimit',
-  },
   fingerprint: {
     parameters: [],
   },
-  conditionalActions: [],
+  initialMatch: {
+    conditions: [],
+    action: { type: 'rateLimit' },
+  },
+  elseAction: {
+    type: 'allow',
+  },
+  elseIfActions: [],
 }
 
 interface RateLimitConfiguratorProps {
@@ -93,11 +96,28 @@ interface RateLimitConfiguratorProps {
 }
 
 export default function RateLimitConfigurator({ initialData, onSave, onCancel }: RateLimitConfiguratorProps) {
-  const [formData, setFormData] = useState<RuleConfig>(initialData || defaultFormData)
+  const [formData, setFormData] = useState<RuleConfig>(() => {
+    if (initialData) {
+      return {
+        ...defaultFormData,
+        ...initialData,
+        initialMatch: initialData.initialMatch || defaultFormData.initialMatch,
+        elseAction: initialData.elseAction || defaultFormData.elseAction,
+        elseIfActions: initialData.elseIfActions || defaultFormData.elseIfActions,
+      }
+    }
+    return defaultFormData
+  })
 
   useEffect(() => {
     if (initialData) {
-      setFormData(initialData)
+      setFormData((prev) => ({
+        ...prev,
+        ...initialData,
+        initialMatch: initialData.initialMatch || prev.initialMatch,
+        elseAction: initialData.elseAction || prev.elseAction,
+        elseIfActions: initialData.elseIfActions || prev.elseIfActions,
+      }))
     }
   }, [initialData])
 
@@ -197,67 +217,44 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
         const typedCondition = condition as Condition
         return (
           <div key={`condition-${depth}-${index}`} className="flex items-center gap-2 my-2">
-            <div className="flex-grow flex flex-wrap items-center gap-2">
-              <Select
-                value={typedCondition.field}
-                onValueChange={(value) => {
-                  typedCondition.field = value
-                  setFormData({ ...formData })
-                }}
-              >
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder={LABELS.CONDITION_FIELD} />
-                </SelectTrigger>
-                <SelectContent>
-                  {REQUEST_MATCH_FIELDS.map((field, idx) => (
-                    <SelectItem key={`field-${field.value}-${index}-${idx}`} value={field.value}>
-                      {field.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={typedCondition.operator}
-                onValueChange={(value) => {
-                  typedCondition.operator = value
-                  setFormData({ ...formData })
-                }}
-              >
-                <SelectTrigger className="w-[120px]">
-                  <SelectValue placeholder={LABELS.CONDITION_OPERATOR} />
-                </SelectTrigger>
-                <SelectContent>
-                  {REQUEST_MATCH_OPERATORS.map((op, idx) => (
-                    <SelectItem key={`operator-${op.value}-${index}-${idx}`} value={op.value}>
-                      {op.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {typedCondition.field === 'headers.nameValue' ? (
-                <>
-                  <Input
-                    type="text"
-                    value={typedCondition.headerName || ''}
-                    onChange={(e) => {
-                      typedCondition.headerName = e.target.value
-                      setFormData({ ...formData })
-                    }}
-                    placeholder="Header Name"
-                    className="w-[150px]"
-                  />
-                  <Input
-                    type="text"
-                    value={typedCondition.headerValue || ''}
-                    onChange={(e) => {
-                      typedCondition.headerValue = e.target.value
-                      setFormData({ ...formData })
-                    }}
-                    placeholder="Header Value"
-                    className="w-[150px]"
-                  />
-                </>
-              ) : typedCondition.field === 'headers.name' ? (
+            <Select
+              value={typedCondition.field}
+              onValueChange={(value) => {
+                typedCondition.field = value
+                setFormData({ ...formData })
+              }}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder={LABELS.CONDITION_FIELD} />
+              </SelectTrigger>
+              <SelectContent>
+                {REQUEST_MATCH_FIELDS.map((field, idx) => (
+                  <SelectItem key={`field-${field.value}-${index}-${idx}`} value={field.value}>
+                    {field.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={typedCondition.operator}
+              onValueChange={(value) => {
+                typedCondition.operator = value
+                setFormData({ ...formData })
+              }}
+            >
+              <SelectTrigger className="w-[120px]">
+                <SelectValue placeholder={LABELS.CONDITION_OPERATOR} />
+              </SelectTrigger>
+              <SelectContent>
+                {REQUEST_MATCH_OPERATORS.map((op, idx) => (
+                  <SelectItem key={`operator-${op.value}-${index}-${idx}`} value={op.value}>
+                    {op.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {typedCondition.field === 'headers.nameValue' ? (
+              <>
                 <Input
                   type="text"
                   value={typedCondition.headerName || ''}
@@ -266,21 +263,42 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
                     setFormData({ ...formData })
                   }}
                   placeholder="Header Name"
-                  className="flex-grow"
+                  className="flex-1"
                 />
-              ) : (
                 <Input
                   type="text"
-                  value={typedCondition.value}
+                  value={typedCondition.headerValue || ''}
                   onChange={(e) => {
-                    typedCondition.value = e.target.value
+                    typedCondition.headerValue = e.target.value
                     setFormData({ ...formData })
                   }}
-                  placeholder={LABELS.CONDITION_VALUE}
-                  className="flex-grow"
+                  placeholder="Header Value"
+                  className="flex-1"
                 />
-              )}
-            </div>
+              </>
+            ) : typedCondition.field === 'headers.name' ? (
+              <Input
+                type="text"
+                value={typedCondition.headerName || ''}
+                onChange={(e) => {
+                  typedCondition.headerName = e.target.value
+                  setFormData({ ...formData })
+                }}
+                placeholder="Header Name"
+                className="flex-1"
+              />
+            ) : (
+              <Input
+                type="text"
+                value={typedCondition.value}
+                onChange={(e) => {
+                  typedCondition.value = e.target.value
+                  setFormData({ ...formData })
+                }}
+                placeholder={LABELS.CONDITION_VALUE}
+                className="flex-1"
+              />
+            )}
             <Button type="button" onClick={() => removeCondition(conditions, index)} variant="destructive" size="icon">
               <MinusCircle className="h-4 w-4" />
             </Button>
@@ -380,11 +398,11 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
     })
   }
 
-  const addConditionalAction = () => {
+  const addElseIfAction = () => {
     setFormData((prev) => ({
       ...prev,
-      conditionalActions: [
-        ...prev.conditionalActions,
+      elseIfActions: [
+        ...prev.elseIfActions,
         {
           conditions: [],
           action: { type: 'block' },
@@ -393,48 +411,130 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
     }))
   }
 
-  const removeConditionalAction = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      conditionalActions: prev.conditionalActions.filter((_, i) => i !== index),
-    }))
-  }
+const removeElseIfAction = (index: number) => {
+  setFormData((prev) => ({
+    ...prev,
+    elseIfActions: prev.elseIfActions.filter((_: ConditionalAction, i: number) => i !== index),
+  }))
+}
 
   const renderConditionalActions = () => {
-    return formData.conditionalActions.map((conditionalAction, index) => (
-      <Card key={`conditional-action-${index}`} className="mt-4">
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-lg font-semibold">Conditional Action {index + 1}</CardTitle>
-            <Button onClick={() => removeConditionalAction(index)} variant="destructive" size="sm">
-              Remove
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <Label>Conditions</Label>
-              {renderConditions(conditionalAction.conditions)}
-              <div className="mt-2 space-x-2">
-                <Button type="button" onClick={() => addCondition(conditionalAction.conditions)} size="sm">
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Condition
-                </Button>
-                <Button type="button" onClick={() => addConditionGroup(conditionalAction.conditions)} size="sm">
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Group
-                </Button>
+    return (
+      <>
+        <Card className="mt-4">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold">Initial Request Match (If)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <Label>Conditions</Label>
+                {renderConditions(formData.initialMatch.conditions)}
+                <div className="mt-2 space-x-2">
+                  <Button type="button" onClick={() => addCondition(formData.initialMatch.conditions)} size="sm">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Condition
+                  </Button>
+                  <Button type="button" onClick={() => addConditionGroup(formData.initialMatch.conditions)} size="sm">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Group
+                  </Button>
+                </div>
+              </div>
+              <div>
+                <Label>Action</Label>
+                <Select
+                  value={formData.initialMatch.action.type}
+                  onValueChange={(value) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      initialMatch: { ...prev.initialMatch, action: { type: value } },
+                    }))
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select action type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ACTION_TYPES.map((action, idx) => (
+                      <SelectItem key={`action-${action.value}-${idx}`} value={action.value}>
+                        {action.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {formData.elseIfActions.map((elseIfAction, index) => (
+          <Card key={`else-if-${index}`} className="mt-4">
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-lg font-semibold">Else If Condition {index + 1}</CardTitle>
+                <Button onClick={() => removeElseIfAction(index)} variant="destructive" size="sm">
+                  Remove
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <Label>Conditions</Label>
+                  {renderConditions(elseIfAction.conditions)}
+                  <div className="mt-2 space-x-2">
+                    <Button type="button" onClick={() => addCondition(elseIfAction.conditions)} size="sm">
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Add Condition
+                    </Button>
+                    <Button type="button" onClick={() => addConditionGroup(elseIfAction.conditions)} size="sm">
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Add Group
+                    </Button>
+                  </div>
+                </div>
+                <div>
+                  <Label>Action</Label>
+                  <Select
+                    value={elseIfAction.action.type}
+                    onValueChange={(value) => {
+                      const updatedElseIfActions = [...formData.elseIfActions]
+                      updatedElseIfActions[index].action.type = value
+                      setFormData((prev) => ({ ...prev, elseIfActions: updatedElseIfActions }))
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select action type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ACTION_TYPES.map((action, idx) => (
+                        <SelectItem key={`action-${action.value}-${idx}`} value={action.value}>
+                          {action.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+
+        <Card className="mt-4">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold">Else Action</CardTitle>
+          </CardHeader>
+          <CardContent>
             <div>
               <Label>Action</Label>
               <Select
-                value={conditionalAction.action.type}
+                value={formData.elseAction.type}
                 onValueChange={(value) => {
-                  const updatedActions = [...formData.conditionalActions]
-                  updatedActions[index].action.type = value
-                  setFormData((prev) => ({ ...prev, conditionalActions: updatedActions }))
+                  setFormData((prev) => ({
+                    ...prev,
+                    elseAction: { type: value },
+                  }))
                 }}
               >
                 <SelectTrigger className="w-full">
@@ -449,10 +549,10 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
                 </SelectContent>
               </Select>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-    ))
+          </CardContent>
+        </Card>
+      </>
+    )
   }
 
   const handleFingerprintChange = (checked: boolean, paramValue: string) => {
@@ -476,12 +576,11 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
     <TooltipProvider>
       <div className="flex flex-col h-full w-full max-w-7xl mx-auto">
         <Tabs defaultValue="basic" className="flex-grow flex flex-col">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="basic">Basic Info</TabsTrigger>
             <TabsTrigger value="rateLimit">Rate Limit</TabsTrigger>
             <TabsTrigger value="fingerprint">Fingerprint</TabsTrigger>
-            <TabsTrigger value="requestMatch">Request Match</TabsTrigger>
-            <TabsTrigger value="actions">Actions</TabsTrigger>
+            <TabsTrigger value="conditionalActions">Conditional Actions</TabsTrigger>
             <TabsTrigger value="expression">Rule Expression</TabsTrigger>
           </TabsList>
 
@@ -567,74 +666,21 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
                 </Card>
               </TabsContent>
 
-              <TabsContent value="requestMatch">
+              <TabsContent value="conditionalActions">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Request Match Configuration</CardTitle>
-                    <CardDescription>Define conditions to match incoming requests.</CardDescription>
+                    <CardTitle>Conditional Actions Configuration</CardTitle>
+                    <CardDescription>Configure the request match and conditional actions.</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <ScrollArea className="h-[400px] rounded-md border p-4">
-                      {formData.requestMatch.conditions.length > 0 ? (
-                        renderConditions(formData.requestMatch.conditions)
-                      ) : (
-                        <p className="text-center text-gray-500">No conditions added yet.</p>
-                      )}
-                    </ScrollArea>
-                    <div className="mt-4 space-x-2">
-                      <Button type="button" onClick={() => addCondition(formData.requestMatch.conditions)} size="sm">
+                    <div className="space-y-4">
+                      <ScrollArea className="h-[400px] rounded-md border p-4">
+                        {renderConditionalActions()}
+                      </ScrollArea>
+                      <Button type="button" onClick={addElseIfAction} size="sm" className="w-full">
                         <PlusCircle className="mr-2 h-4 w-4" />
-                        Add Condition
+                        Add Else If Condition
                       </Button>
-                      <Button type="button" onClick={() => addConditionGroup(formData.requestMatch.conditions)} size="sm">
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Add Group
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="actions">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Actions Configuration</CardTitle>
-                    <CardDescription>Configure the default action and conditional actions.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-6">
-                      <div className="space-y-2">
-                        <Label>Default Action</Label>
-                        <Select
-                          value={formData.action.type}
-                          onValueChange={(value) => setFormData((prev) => ({ ...prev, action: { type: value } }))}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select action type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {ACTION_TYPES.map((action, idx) => (
-                              <SelectItem key={`action-${action.value}-${idx}`} value={action.value}>
-                                {action.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-4">
-                        <Label>Conditional Actions</Label>
-                        <ScrollArea className="h-[400px] rounded-md border p-4">
-                          {formData.conditionalActions.length > 0 ? (
-                            renderConditionalActions()
-                          ) : (
-                            <p className="text-center text-gray-500">No conditional actions added yet.</p>
-                          )}
-                        </ScrollArea>
-                        <Button type="button" onClick={addConditionalAction} size="sm" className="w-full">
-                          <PlusCircle className="mr-2 h-4 w-4" />
-                          Add Conditional Action
-                        </Button>
-                      </div>
                     </div>
                   </CardContent>
                 </Card>
