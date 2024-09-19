@@ -25,7 +25,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useRuleStore } from '@/store/ruleStore'
-import type { RuleConfig } from '@/store/ruleStore'
+import type { RuleConfig } from '@/types/ruleTypes'
 
 interface SortableItemProps {
   id: string

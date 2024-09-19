@@ -1,50 +1,6 @@
 import { create } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
-
-interface Condition {
-  field: string;
-  operator: string;
-  value: string;
-  headerName?: string;
-  headerValue?: string;
-}
-
-interface ConditionGroup {
-  conditions: (Condition | ConditionGroup | { type: 'operator'; logic: string })[];
-}
-
-interface FingerprintParameter {
-  name: string;
-  headerName?: string;
-  headerValue?: string;
-  body?: string;
-}
-
-interface ConditionalAction {
-  conditions: (Condition | ConditionGroup | { type: 'operator'; logic: string })[];
-  action: {
-    type: string;
-  };
-}
-
-export interface RuleConfig {
-  id: string;
-  order: number;
-  name: string;
-  description: string;
-  rateLimit: {
-    limit: number;
-    period: number;
-  };
-  fingerprint: {
-    parameters: FingerprintParameter[];
-  };
-  initialMatch: ConditionalAction;
-  elseAction: {
-    type: string;
-  };
-  elseIfActions: ConditionalAction[];
-}
+import type { RuleConfig } from '../types/ruleTypes';
 
 interface RuleStore {
   rules: RuleConfig[];
@@ -98,7 +54,7 @@ export const useRuleStore = create<RuleStore>((set, get) => ({
       if (!response.ok) {
         throw new Error(`Failed to add rule: ${response.status} ${response.statusText}`);
       }
-      set((state: RuleStore) => ({ rules: [...state.rules, newRule] }));
+      set((state) => ({ rules: [...state.rules, newRule] }));
     } catch (error) {
       console.error('Error adding rule:', error);
       throw error;
@@ -122,10 +78,8 @@ export const useRuleStore = create<RuleStore>((set, get) => ({
       if (!response.ok) {
         throw new Error(`Failed to update rule: ${response.status} ${response.statusText}`);
       }
-      set((state: RuleStore) => ({
-        rules: state.rules.map((rule: RuleConfig) =>
-          rule.id === updatedRule.id ? updatedRule : rule
-        ),
+      set((state) => ({
+        rules: state.rules.map((rule) => (rule.id === updatedRule.id ? updatedRule : rule)),
       }));
     } catch (error) {
       console.error('Error updating rule:', error);
@@ -148,8 +102,8 @@ export const useRuleStore = create<RuleStore>((set, get) => ({
       if (!response.ok) {
         throw new Error(`Failed to delete rule: ${response.status} ${response.statusText}`);
       }
-      set((state: RuleStore) => ({
-        rules: state.rules.filter((rule: RuleConfig) => rule.id !== id),
+      set((state) => ({
+        rules: state.rules.filter((rule) => rule.id !== id),
       }));
     } catch (error) {
       console.error('Error deleting rule:', error);

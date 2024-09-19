@@ -21,51 +21,7 @@ import {
   REQUEST_MATCH_FIELDS,
   REQUEST_MATCH_OPERATORS,
 } from './config-variables'
-
-interface Condition {
-  field: string
-  operator: string
-  value: string
-  headerName?: string
-  headerValue?: string
-}
-
-interface ConditionGroup {
-  conditions: (Condition | ConditionGroup | { type: 'operator'; logic: string })[]
-}
-
-interface FingerprintParameter {
-  name: string
-  headerName?: string
-  headerValue?: string
-  body?: string
-}
-
-interface ConditionalAction {
-  conditions: (Condition | ConditionGroup | { type: 'operator'; logic: string })[]
-  action: {
-    type: string
-  }
-}
-
-interface RuleConfig {
-  id: string;
-  order: number;
-  name: string;
-  description: string;
-  rateLimit: {
-    limit: number;
-    period: number;
-  };
-  fingerprint: {
-    parameters: FingerprintParameter[];
-  };
-  initialMatch: ConditionalAction;
-  elseAction: {
-    type: string;
-  };
-  elseIfActions: ConditionalAction[];
-}
+import type { RuleConfig, Condition, ConditionGroup, FingerprintParameter, ConditionalAction } from '@/types/ruleTypes'
 
 const defaultFormData: RuleConfig = {
   id: uuidv4(),
@@ -83,9 +39,8 @@ const defaultFormData: RuleConfig = {
     conditions: [],
     action: { type: 'rateLimit' },
   },
-  elseAction: { type: 'allow' },
   elseIfActions: [],
-};
+}
 
 interface RateLimitConfiguratorProps {
   initialData?: RuleConfig
@@ -100,8 +55,8 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
         ...defaultFormData,
         ...initialData,
         initialMatch: initialData.initialMatch || defaultFormData.initialMatch,
-        elseAction: initialData.elseAction || defaultFormData.elseAction,
-        elseIfActions: initialData.elseIfActions || defaultFormData.elseIfActions,
+        elseAction: initialData.elseAction,
+        elseIfActions: initialData.elseIfActions || [],
       }
     }
     return defaultFormData
@@ -114,7 +69,7 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
         ...initialData,
         initialMatch: initialData.initialMatch || prev.initialMatch,
         elseAction: initialData.elseAction,
-        elseIfActions: initialData.elseIfActions || prev.elseIfActions,
+        elseIfActions: initialData.elseIfActions || [],
       }))
     }
   }, [initialData])
@@ -409,18 +364,23 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
     }))
   }
 
-const removeElse = () => {
-  setFormData((prev) => ({
-    ...prev,
-    elseAction: { type: 'allow' },
-    elseIfActions: [],
-  }));
-};
+  const removeElse = () => {
+    setFormData((prev: RuleConfig) => {
+      const { elseAction, ...rest } = prev
+      return {
+        ...rest,
+        elseIfActions: [],
+      }
+    })
+  }
+
 
   const removeElseIfAction = (index: number) => {
     setFormData((prev) => ({
       ...prev,
-      elseIfActions: prev.elseIfActions.filter((_, i) => i !== index),
+      elseIfActions: prev.elseIfActions.filter((_, i) => i !==
+
+ index),
     }))
   }
 
@@ -534,7 +494,7 @@ const removeElse = () => {
           </Card>
         ))}
 
-        {formData.elseAction ? (
+        {formData.elseAction && (
           <Card className="mt-4">
             <CardHeader>
               <div className="flex justify-between items-center">
@@ -570,7 +530,9 @@ const removeElse = () => {
               </div>
             </CardContent>
           </Card>
-        ) : (
+        )}
+
+        {!formData.elseAction && (
           <div className="mt-4">
             <Button onClick={addElse} size="sm">
               <PlusCircle className="mr-2 h-4 w-4" />
