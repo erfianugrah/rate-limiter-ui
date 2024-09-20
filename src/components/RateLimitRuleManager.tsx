@@ -1,115 +1,15 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
-import type { DragEndEvent } from '@dnd-kit/core'
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { useSortable } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { PlusCircle, Edit, Trash2, GripVertical, Moon, Sun } from 'lucide-react'
-import RateLimitConfigurator from './RateLimitConfigurator'
 import { useToast } from "@/components/ui/use-toast"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
 import { useRuleStore } from '@/store/ruleStore'
 import type { RuleConfig } from '@/types/ruleTypes'
-import { TimeDisplay } from './time-display'
-
-interface SortableItemProps {
-  id: string
-  rule: RuleConfig
-  onEdit: (rule: RuleConfig) => void
-  onDelete: (id: string) => void
-  isLoading: boolean
-}
-
-function SortableItem({ id, rule, onEdit, onDelete, isLoading }: SortableItemProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-  } = useSortable({id: id});
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-
-  const handleDeleteClick = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDeleteDialogOpen(true);
-  }, []);
-
-  const handleDeleteConfirm = useCallback(() => {
-    onDelete(id);
-    setIsDeleteDialogOpen(false);
-  }, [id, onDelete]);
-
-  return (
-    <div ref={setNodeRef} style={style}>
-      <Card className="mb-4">
-        <CardHeader className="flex flex-row items-center space-x-4 pb-2">
-          <div {...attributes} {...listeners} className="cursor-move">
-            <GripVertical className="h-5 w-5 text-gray-500" />
-          </div>
-          <div className="flex-grow">
-            <CardTitle className="text-lg font-semibold">{rule.name}</CardTitle>
-            <p className="text-sm text-gray-500">{rule.description}</p>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-between items-center">
-            <p className="text-sm">
-              Rate Limit: {rule.rateLimit.limit} requests per <TimeDisplay seconds={rule.rateLimit.period} />
-            </p>
-            <div className="flex space-x-2">
-              <Button variant="outline" size="sm" onClick={() => onEdit(rule)} disabled={isLoading}>
-                <Edit className="mr-2 h-4 w-4" /> Edit
-              </Button>
-              <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" size="sm" onClick={handleDeleteClick} disabled={isLoading}>
-                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure you want to delete this rule?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete the rate limit rule.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteConfirm}>Delete</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+import { ThemeToggle } from './theme-toggle'
+import { RuleList } from './rule-list'
+import { AddRuleButton } from './add-rule-button'
+import { RuleConfiguratorDialog } from './rule-configurator-dialog'
+import type { DragEndEvent } from '@dnd-kit/core'
+import { arrayMove } from '@dnd-kit/sortable'
 
 export default function RateLimitRuleManager() {
   const { rules, isLoading, fetchRules, addRule, updateRule, deleteRule, reorderRules } = useRuleStore()
@@ -117,17 +17,6 @@ export default function RateLimitRuleManager() {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
   const { toast } = useToast()
   const [theme, setTheme] = useState<'light' | 'dark'>('dark')
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
 
   useEffect(() => {
     fetchRules().catch((error: Error) => {
@@ -218,14 +107,14 @@ export default function RateLimitRuleManager() {
     }
   }, [rules, reorderRules, toast])
 
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     setTheme(prevTheme => {
       const newTheme = prevTheme === 'light' ? 'dark' : 'light'
       document.documentElement.classList.toggle('dark', newTheme === 'dark')
       localStorage.setItem('theme', newTheme)
       return newTheme
     })
-  }
+  }, [])
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null
@@ -239,57 +128,26 @@ export default function RateLimitRuleManager() {
     <div className="container mx-auto p-4 min-h-screen">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Rate Limit Rules</h1>
-        <Button onClick={toggleTheme} variant="outline" size="icon">
-          {theme === 'light' ? <Moon className="h-[1.2rem] w-[1.2rem]" /> : <Sun className="h-[1.2rem] w-[1.2rem]" />}
-        </Button>
+        <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
       </div>
-      <Button onClick={handleAddRule} className="mb-4" disabled={isLoading}>
-        <PlusCircle className="mr-2 h-4 w-4" /> Add New Rule
-      </Button>
+      <AddRuleButton onClick={handleAddRule} isLoading={isLoading} />
       {rules.length > 0 ? (
-        <DndContext 
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext 
-            items={rules.map((rule) => rule.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            {rules.map((rule) => (
-              <SortableItem 
-                key={rule.id} 
-                id={rule.id}
-                rule={rule}
-                onEdit={handleEditRule}
-                onDelete={handleDeleteRule}
-                isLoading={isLoading}
-              />
-            ))}
-          </SortableContext>
-        </DndContext>
+        <RuleList
+          rules={rules}
+          onEdit={handleEditRule}
+          onDelete={handleDeleteRule}
+          onReorder={handleDragEnd}
+          isLoading={isLoading}
+        />
       ) : (
         <p>No rules found. Add a new rule to get started.</p>
       )}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-[90vw] w-full max-h-[100vh] p-0">
-          <DialogHeader className="px-6 py-4">
-            <DialogTitle>{editingRule ? 'Edit Rule' : 'Add New Rule'}</DialogTitle>
-            <DialogDescription>
-              {editingRule ? 'Modify the existing rate limit rule.' : 'Create a new rate limit rule.'}
-            </DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="max-h-[calc(98vh-120px)]">
-            <div className="p-6">
-              <RateLimitConfigurator
-                initialData={editingRule || undefined}
-                onSave={handleSaveRule}
-                onCancel={() => setIsModalOpen(false)}
-              />
-            </div>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
+      <RuleConfiguratorDialog
+        isOpen={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        editingRule={editingRule}
+        onSave={handleSaveRule}
+      />
     </div>
   )
 }
