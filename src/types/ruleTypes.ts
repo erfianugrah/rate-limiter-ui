@@ -21,6 +21,9 @@ export interface ConditionalAction {
   conditions: (Condition | ConditionGroup | { type: 'operator'; logic: string })[];
   action: {
     type: string;
+    statusCode?: number;
+    bodyType?: 'text' | 'json' | 'html';
+    body?: string;
   };
 }
 
@@ -39,6 +42,9 @@ export interface RuleConfig {
   initialMatch: ConditionalAction;
   elseAction?: {
     type: string;
+    statusCode?: number;
+    bodyType?: 'text' | 'json' | 'html';
+    body?: string;
   };
   elseIfActions: ConditionalAction[];
 }

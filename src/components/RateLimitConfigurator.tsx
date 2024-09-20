@@ -1,18 +1,19 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Checkbox } from "@/components/ui/checkbox"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { PlusCircle, MinusCircle, Info } from 'lucide-react'
 import { v4 as uuidv4 } from 'uuid'
-import { Checkbox } from '@/components/ui/checkbox'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   LABELS,
   LOGICAL_OPERATORS,
@@ -22,6 +23,12 @@ import {
   REQUEST_MATCH_OPERATORS,
 } from './config-variables'
 import type { RuleConfig, Condition, ConditionGroup, FingerprintParameter, ConditionalAction } from '@/types/ruleTypes'
+
+interface RateLimitConfiguratorProps {
+  initialData?: RuleConfig
+  onSave: (config: RuleConfig) => Promise<void>
+  onCancel: () => void
+}
 
 const defaultFormData: RuleConfig = {
   id: uuidv4(),
@@ -40,12 +47,6 @@ const defaultFormData: RuleConfig = {
     action: { type: 'rateLimit' },
   },
   elseIfActions: [],
-}
-
-interface RateLimitConfiguratorProps {
-  initialData?: RuleConfig
-  onSave: (config: RuleConfig) => Promise<void>
-  onCancel: () => void
 }
 
 export default function RateLimitConfigurator({ initialData, onSave, onCancel }: RateLimitConfiguratorProps) {
@@ -111,6 +112,53 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
       parentConditions.splice(index - 1, 1)
     }
     setFormData({ ...formData })
+  }
+
+  const renderActionFields = (action: ConditionalAction['action'], updateAction: (newAction: ConditionalAction['action']) => void) => {
+    if (action.type === 'customResponse') {
+      return (
+        <div className="space-y-4">
+          <div>
+            <Label>HTTP Status Code</Label>
+            <Input
+              type="number"
+              value={action.statusCode || ''}
+              onChange={(e) => updateAction({ ...action, statusCode: parseInt(e.target.value) })}
+              placeholder="Enter HTTP status code"
+            />
+          </div>
+          <div>
+            <Label>Response Body Type</Label>
+            <RadioGroup
+              value={action.bodyType || 'text'}
+              onValueChange={(value: 'text' | 'json' | 'html') => updateAction({ ...action, bodyType: value })}
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="text" id="text" />
+                <Label htmlFor="text">Text</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="json" id="json" />
+                <Label htmlFor="json">JSON</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="html" id="html" />
+                <Label htmlFor="html">HTML</Label>
+              </div>
+            </RadioGroup>
+          </div>
+          <div>
+            <Label>Response Body</Label>
+            <Textarea
+              value={action.body || ''}
+              onChange={(e) => updateAction({ ...action, body: e.target.value })}
+              placeholder={`Enter ${action.bodyType || 'text'} response body`}
+            />
+          </div>
+        </div>
+      )
+    }
+    return null
   }
 
   const renderConditions = (conditions: (Condition | ConditionGroup | { type: 'operator'; logic: string })[], depth = 0) => {
@@ -351,46 +399,6 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
     })
   }
 
-  const addElseIfAction = () => {
-    setFormData((prev) => ({
-      ...prev,
-      elseIfActions: [
-        ...prev.elseIfActions,
-        {
-          conditions: [],
-          action: { type: 'block' },
-        },
-      ],
-    }))
-  }
-
-  const removeElse = () => {
-    setFormData((prev: RuleConfig) => {
-      const { elseAction, ...rest } = prev
-      return {
-        ...rest,
-        elseIfActions: [],
-      }
-    })
-  }
-
-
-  const removeElseIfAction = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      elseIfActions: prev.elseIfActions.filter((_, i) => i !==
-
- index),
-    }))
-  }
-
-  const addElse = () => {
-    setFormData((prev) => ({
-      ...prev,
-      elseAction: { type: 'allow' },
-    }))
-  }
-
   const renderConditionalActions = () => {
     return (
       <>
@@ -421,7 +429,13 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
                   onValueChange={(value) => {
                     setFormData((prev) => ({
                       ...prev,
-                      initialMatch: { ...prev.initialMatch, action: { type: value } },
+                      initialMatch: { 
+                        ...prev.initialMatch, 
+                        action: { 
+                          type: value,
+                          ...(value === 'customResponse' ? { statusCode: 200, bodyType: 'text', body: '' } : {})
+                        } 
+                      },
                     }))
                   }}
                 >
@@ -436,6 +450,12 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
                     ))}
                   </SelectContent>
                 </Select>
+                {renderActionFields(formData.initialMatch.action, (newAction) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    initialMatch: { ...prev.initialMatch, action: newAction },
+                  }))
+                })}
               </div>
             </div>
           </CardContent>
@@ -473,7 +493,10 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
                     value={elseIfAction.action.type}
                     onValueChange={(value) => {
                       const updatedElseIfActions = [...formData.elseIfActions]
-                      updatedElseIfActions[index].action.type = value
+                      updatedElseIfActions[index].action = { 
+                        type: value,
+                        ...(value === 'customResponse' ? { statusCode: 200, bodyType: 'text', body: '' } : {})
+                      }
                       setFormData((prev) => ({ ...prev, elseIfActions: updatedElseIfActions }))
                     }}
                   >
@@ -488,6 +511,11 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
                       ))}
                     </SelectContent>
                   </Select>
+                  {renderActionFields(elseIfAction.action, (newAction) => {
+                    const updatedElseIfActions = [...formData.elseIfActions]
+                    updatedElseIfActions[index].action = newAction
+                    setFormData((prev) => ({ ...prev, elseIfActions: updatedElseIfActions }))
+                  })}
                 </div>
               </div>
             </CardContent>
@@ -512,7 +540,10 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
                   onValueChange={(value) => {
                     setFormData((prev) => ({
                       ...prev,
-                      elseAction: { type: value },
+                      elseAction: { 
+                        type: value,
+                        ...(value === 'customResponse' ? { statusCode: 200, bodyType: 'text', body: '' } : {})
+                      },
                     }))
                   }}
                 >
@@ -527,6 +558,9 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
                     ))}
                   </SelectContent>
                 </Select>
+                {renderActionFields(formData.elseAction, (newAction) => {
+                  setFormData((prev) => ({ ...prev, elseAction: newAction }))
+                })}
               </div>
             </CardContent>
           </Card>
@@ -549,23 +583,6 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
             </Button>
           </div>
         )}
-
-        <Card className="mt-4">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Rule Logic Structure</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-gray-600">
-              The rule logic follows this structure:
-              <br />
-              1. Initial Match (If): This is always present and defines the primary condition and action.
-              <br />
-              2. Else If Conditions: These are optional and can be added only if an Else action is present. They provide additional conditions and actions.
-              <br />
-              3. Else Action: This is optional. If present, it defines the action to take when no other conditions are met. If not present, no action will be taken for requests that don't match any conditions.
-            </p>
-          </CardContent>
-        </Card>
       </>
     )
   }
@@ -586,6 +603,40 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
   }
 
   const ruleExpression = useMemo(() => generateRuleExpression(formData), [formData])
+
+  const addElseIfAction = () => {
+    setFormData((prev) => ({
+      ...prev,
+      elseIfActions: [
+        ...prev.elseIfActions,
+        {
+          conditions: [],
+          action: { type: 'block' },
+        },
+      ],
+    }))
+  }
+
+  const removeElse = () => {
+    setFormData((prev) => {
+      const { elseAction, ...rest } = prev
+      return rest
+    })
+  }
+
+  const removeElseIfAction = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      elseIfActions: prev.elseIfActions.filter((_, i) => i !== index),
+    }))
+  }
+
+  const addElse = () => {
+    setFormData((prev) => ({
+      ...prev,
+      elseAction: { type: 'allow' },
+    }))
+  }
 
   return (
     <TooltipProvider>
@@ -714,9 +765,9 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel }:
           </ScrollArea>
         </Tabs>
         <div className="flex justify-end space-x-4 p-4 bg-background border-t">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
           <Button onClick={async (e) => { 
             e.preventDefault(); 
             await onSave(formData); 
