@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useRuleStore } from '@/store/ruleStore'
 import type { RuleConfig } from '@/types/ruleTypes'
+import { TimeDisplay } from './time-display'
 
 interface SortableItemProps {
   id: string
@@ -77,7 +78,7 @@ function SortableItem({ id, rule, onEdit, onDelete, isLoading }: SortableItemPro
         <CardContent>
           <div className="flex justify-between items-center">
             <p className="text-sm">
-              Rate Limit: {rule.rateLimit.limit} requests per {rule.rateLimit.period} seconds
+              Rate Limit: {rule.rateLimit.limit} requests per <TimeDisplay seconds={rule.rateLimit.period} />
             </p>
             <div className="flex space-x-2">
               <Button variant="outline" size="sm" onClick={() => onEdit(rule)} disabled={isLoading}>
@@ -128,21 +129,20 @@ export default function RateLimitRuleManager() {
     })
   );
 
-useEffect(() => {
-  fetchRules().catch((error: Error) => {
-    console.error('Error fetching rules:', error);
-    toast({
-      title: "Error",
-      description: `Failed to fetch rules: ${error.message}`,
-      variant: "destructive",
+  useEffect(() => {
+    fetchRules().catch((error: Error) => {
+      console.error('Error fetching rules:', error);
+      toast({
+        title: "Error",
+        description: `Failed to fetch rules: ${error.message}`,
+        variant: "destructive",
+      })
     })
-  })
-}, [fetchRules, toast])
+  }, [fetchRules, toast])
 
-// Add this logging
-useEffect(() => {
-  console.log('Current rules in component:', rules);
-}, [rules]);
+  useEffect(() => {
+    console.log('Current rules in component:', rules);
+  }, [rules]);
 
   const handleAddRule = useCallback((): void => {
     setEditingRule(null)
@@ -170,29 +170,28 @@ useEffect(() => {
     }
   }, [deleteRule, toast])
 
-const handleSaveRule = useCallback(async (config: RuleConfig): Promise<void> => {
-  try {
-    if (editingRule) {
-      await updateRule(config)
-    } else {
-      const { id, order, ...newRule } = config
-      await addRule(newRule as Omit<RuleConfig, 'id' | 'order'>)
+  const handleSaveRule = useCallback(async (config: RuleConfig): Promise<void> => {
+    try {
+      if (editingRule) {
+        await updateRule(config)
+      } else {
+        const { id, order, ...newRule } = config
+        await addRule(newRule as Omit<RuleConfig, 'id' | 'order'>)
+      }
+      setIsModalOpen(false)
+      toast({
+        title: "Success",
+        description: editingRule ? "Rule updated successfully." : "New rule added successfully.",
+      })
+      await fetchRules()
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to save rule: ${(error as Error).message}`,
+        variant: "destructive",
+      })
     }
-    setIsModalOpen(false)
-    toast({
-      title: "Success",
-      description: editingRule ? "Rule updated successfully." : "New rule added successfully.",
-    })
-    // Fetch rules after saving
-    await fetchRules()
-  } catch (error) {
-    toast({
-      title: "Error",
-      description: `Failed to save rule: ${(error as Error).message}`,
-      variant: "destructive",
-    })
-  }
-}, [editingRule, updateRule, addRule, fetchRules, toast])
+  }, [editingRule, updateRule, addRule, fetchRules, toast])
 
   const handleDragEnd = useCallback(async (event: DragEndEvent): Promise<void> => {
     const {active, over} = event;
