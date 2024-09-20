@@ -1,47 +1,72 @@
-# Astro Starter Kit: Minimal
+# Rate Limiting UI
 
-```sh
-npm create astro@latest -- --template minimal
-```
+## Overview
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/withastro/astro/tree/latest/examples/minimal)
-[![Open with CodeSandbox](https://assets.codesandbox.io/github/button-edit-lime.svg)](https://codesandbox.io/p/sandbox/github/withastro/astro/tree/latest/examples/minimal)
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/withastro/astro?devcontainer_path=.devcontainer/minimal/devcontainer.json)
+The Rate Limiting UI is a web application that allows users to configure and manage rate limiting rules for the Rate Limiting Worker. It provides an intuitive interface for creating, editing, and organizing complex rate limiting rules that can be applied to incoming requests.
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## Features
 
-## 🚀 Project Structure
+- Create, edit, and delete rate limiting rules
+- Configure rule conditions based on various request properties
+- Set up fingerprinting for accurate client identification
+- Define rate limits and actions for when limits are exceeded
+- Preview and test rules before deployment
+- Manage multiple configurations for different environments
 
-Inside of your Astro project, you'll see the following folders and files:
+## Architecture
 
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
-```
+The Rate Limiting UI is built using React and Next.js, providing a fast and responsive single-page application experience. It communicates with a backend API to store and retrieve rate limiting configurations.
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+### Key Components
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+1. **Rule Editor**: Allows users to create and modify rate limiting rules.
+2. **Condition Builder**: Provides a visual interface for constructing complex matching conditions.
+3. **Fingerprint Configurator**: Enables users to set up custom fingerprinting rules.
+4. **Action Selector**: Lets users define actions to take when rate limits are exceeded.
+5. **Configuration Manager**: Manages multiple rate limiting configurations.
+6. **Preview & Test**: Allows users to test rules against sample requests.
 
-Any static assets, like images, can be placed in the `public/` directory.
+## Workflow
 
-## 🧞 Commands
+1. Users log in to the Rate Limiting UI.
+2. They can create a new configuration or select an existing one to edit.
+3. Within a configuration, users can add, edit, or remove rate limiting rules.
+4. For each rule, users can:
+   - Set basic information (name, description)
+   - Define matching conditions
+   - Configure fingerprinting
+   - Set rate limits (requests per time period)
+   - Choose actions for when limits are exceeded
+5. Users can preview and test their rules using the built-in testing tool.
+6. Once satisfied, users can deploy the configuration to the Rate Limiting Worker.
 
-All commands are run from the root of the project, from a terminal:
+## Integration with Rate Limiting Worker
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
+The UI generates a JSON configuration that is consumed by the Rate Limiting Worker. This configuration includes all the rules, their conditions, fingerprinting settings, and actions.
 
-## 👀 Want to learn more?
+When a configuration is deployed:
+1. The UI sends the configuration to a secure storage system.
+2. The Rate Limiting Worker fetches the latest configuration from this storage.
+3. The Worker applies the new rules to incoming requests.
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+## Security Considerations
+
+- Access to the UI is restricted to authorized personnel only.
+- All communications between the UI and the backend are encrypted.
+- The UI implements CSRF protection and input validation to prevent attacks.
+- Configurations are versioned, allowing for easy rollback if needed.
+
+## Extending the UI
+
+The UI is designed to be modular and extensible. New components can be added to support additional features such as:
+- Analytics and reporting
+- Integration with monitoring systems
+- Support for new types of rate limiting conditions or actions
+
+## Troubleshooting
+
+- If changes are not reflected in the Worker, ensure the configuration has been properly deployed.
+- Use the built-in testing tool to validate rules before deployment.
+- Check the browser console and network tab for any errors during configuration.
+
+For more detailed information on using the Rate Limiting UI, please refer to the user guide.
