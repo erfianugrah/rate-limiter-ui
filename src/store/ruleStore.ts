@@ -6,11 +6,11 @@ interface RuleStore {
   rules: RuleConfig[];
   isLoading: boolean;
   fetchRules: () => Promise<void>;
-  addRule: (rule: Omit<RuleConfig, 'id' | 'order' | 'version'>) => Promise<void>;
-  updateRule: (rule: RuleConfig) => Promise<void>;
+  addRule: (rule: Omit<RuleConfig, 'id' | 'order' | 'version'>) => Promise<RuleConfig>;
+  updateRule: (rule: RuleConfig) => Promise<RuleConfig>;
   deleteRule: (id: string) => Promise<void>;
   reorderRules: (rules: RuleConfig[]) => Promise<void>;
-  revertRule: (ruleId: string, targetVersion: number) => Promise<void>;
+  revertRule: (ruleId: string, targetVersion: number) => Promise<RuleConfig>;
 }
 
 export const useRuleStore = create<RuleStore>((set, get) => ({
@@ -102,6 +102,7 @@ export const useRuleStore = create<RuleStore>((set, get) => ({
           rule.id === updatedRule.id ? updatedRuleData.rule : rule
         ),
       }));
+      return updatedRuleData.rule;
     } catch (error) {
       console.error('Error updating rule:', error);
       throw error;
@@ -143,10 +144,6 @@ export const useRuleStore = create<RuleStore>((set, get) => ({
     set({ isLoading: true });
     try {
       console.log('Reordering rules:', reorderedRules);
-      const updatedRules = reorderedRules.map((rule, index) => ({
-        ...rule,
-        order: index,
-      }));
       const response = await fetch('/api/config/reorder', {
         method: 'PUT',
         headers: {
@@ -155,7 +152,7 @@ export const useRuleStore = create<RuleStore>((set, get) => ({
           Pragma: 'no-cache',
           Expires: '0',
         },
-        body: JSON.stringify({ rules: updatedRules }),
+        body: JSON.stringify({ rules: reorderedRules }),
       });
       console.log('Reorder rules response status:', response.status);
       if (!response.ok) {
@@ -198,6 +195,7 @@ export const useRuleStore = create<RuleStore>((set, get) => ({
       set((state) => ({
         rules: state.rules.map((rule) => (rule.id === ruleId ? revertedRuleData.rule : rule)),
       }));
+      return revertedRuleData.rule;
     } catch (error) {
       console.error('Error reverting rule:', error);
       throw error;

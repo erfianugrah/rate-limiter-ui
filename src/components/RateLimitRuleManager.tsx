@@ -56,10 +56,12 @@ export default function RateLimitRuleManager() {
   const handleSaveRule = useCallback(async (config: RuleConfig): Promise<void> => {
     try {
       if (editingRule) {
-        await updateRule(config)
+        const updatedRule = await updateRule(config);
+        setEditingRule(updatedRule);
       } else {
-        const { id, order, ...newRule } = config
-        await addRule(newRule as Omit<RuleConfig, 'id' | 'order'>)
+        const { id, order, ...newRule } = config;
+        const addedRule = await addRule(newRule as Omit<RuleConfig, 'id' | 'order' | 'version'>);
+        setEditingRule(addedRule);
       }
       setIsModalOpen(false)
       toast({
@@ -79,7 +81,10 @@ export default function RateLimitRuleManager() {
 
   const handleRevertRule = useCallback(async (ruleId: string, targetVersion: number): Promise<void> => {
     try {
-      await revertRule(ruleId, targetVersion)
+      const revertedRule = await revertRule(ruleId, targetVersion)
+      if (editingRule && editingRule.id === ruleId) {
+        setEditingRule(revertedRule);
+      }
       toast({
         title: "Success",
         description: `Rule reverted to version ${targetVersion} successfully.`,
@@ -92,7 +97,7 @@ export default function RateLimitRuleManager() {
         variant: "destructive",
       })
     }
-  }, [revertRule, fetchRules, toast])
+  }, [revertRule, fetchRules, toast, editingRule])
 
   const handleDragEnd = useCallback(async (event: DragEndEvent): Promise<void> => {
     const {active, over} = event;
@@ -155,7 +160,7 @@ export default function RateLimitRuleManager() {
       ) : (
         <p className="text-center text-gray-500 mt-4">No rules found. Add a new rule to get started.</p>
       )}
-      <RuleConfiguratorDialog
+<RuleConfiguratorDialog
         isOpen={isModalOpen}
         onOpenChange={setIsModalOpen}
         editingRule={editingRule}
