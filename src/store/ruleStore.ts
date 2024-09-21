@@ -6,10 +6,11 @@ interface RuleStore {
   rules: RuleConfig[];
   isLoading: boolean;
   fetchRules: () => Promise<void>;
-  addRule: (rule: Omit<RuleConfig, 'id' | 'order'>) => Promise<void>;
+  addRule: (rule: Omit<RuleConfig, 'id' | 'order' | 'version'>) => Promise<void>;
   updateRule: (rule: RuleConfig) => Promise<void>;
   deleteRule: (id: string) => Promise<void>;
   reorderRules: (rules: RuleConfig[]) => Promise<void>;
+  revertRule: (ruleId: string, targetVersion: number) => Promise<void>;
 }
 
 export const useRuleStore = create<RuleStore>((set, get) => ({
@@ -42,10 +43,10 @@ export const useRuleStore = create<RuleStore>((set, get) => ({
       set({ isLoading: false });
     }
   },
-  addRule: async (rule: Omit<RuleConfig, 'id' | 'order'>) => {
+  addRule: async (rule: Omit<RuleConfig, 'id' | 'order' | 'version'>) => {
     set({ isLoading: true });
     try {
-      const newRule = { ...rule, id: uuidv4(), order: get().rules.length };
+      const newRule = { ...rule, id: uuidv4(), order: get().rules.length, version: 0 };
       console.log('Adding new rule:', newRule);
       const response = await fetch('/api/config', {
         method: 'POST',
@@ -121,17 +122,11 @@ export const useRuleStore = create<RuleStore>((set, get) => ({
         },
       });
       console.log('Delete rule response status:', response.status);
-      console.log(
-        'Delete rule response headers:',
-        JSON.stringify(Array.from(response.headers.entries()))
-      );
-
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Error response body:', errorText);
         throw new Error(`Failed to delete rule: ${response.status} ${response.statusText}`);
       }
-
       const deletedRuleData = await response.json();
       console.log('Deleted rule data:', deletedRuleData);
       set((state) => ({
@@ -148,6 +143,10 @@ export const useRuleStore = create<RuleStore>((set, get) => ({
     set({ isLoading: true });
     try {
       console.log('Reordering rules:', reorderedRules);
+      const updatedRules = reorderedRules.map((rule, index) => ({
+        ...rule,
+        order: index,
+      }));
       const response = await fetch('/api/config/reorder', {
         method: 'PUT',
         headers: {
@@ -156,7 +155,7 @@ export const useRuleStore = create<RuleStore>((set, get) => ({
           Pragma: 'no-cache',
           Expires: '0',
         },
-        body: JSON.stringify({ rules: reorderedRules }),
+        body: JSON.stringify({ rules: updatedRules }),
       });
       console.log('Reorder rules response status:', response.status);
       if (!response.ok) {
@@ -166,9 +165,41 @@ export const useRuleStore = create<RuleStore>((set, get) => ({
       }
       const reorderedData = await response.json();
       console.log('Reordered rules data:', reorderedData);
-      set({ rules: reorderedRules });
+      set({ rules: reorderedData.rules });
     } catch (error) {
       console.error('Error reordering rules:', error);
+      throw error;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+  revertRule: async (ruleId: string, targetVersion: number) => {
+    set({ isLoading: true });
+    try {
+      console.log(`Reverting rule ${ruleId} to version ${targetVersion}`);
+      const response = await fetch(`/api/config/rules/${ruleId}/revert`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          Pragma: 'no-cache',
+          Expires: '0',
+        },
+        body: JSON.stringify({ targetVersion }),
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error response body:', errorText);
+        throw new Error(`Failed to revert rule: ${response.status} ${response.statusText}`);
+      }
+      const revertedRuleData = await response.json();
+      console.log('Reverted rule data:', revertedRuleData);
+
+      set((state) => ({
+        rules: state.rules.map((rule) => (rule.id === ruleId ? revertedRuleData.rule : rule)),
+      }));
+    } catch (error) {
+      console.error('Error reverting rule:', error);
       throw error;
     } finally {
       set({ isLoading: false });

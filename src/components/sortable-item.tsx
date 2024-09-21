@@ -1,101 +1,87 @@
-import React, { useState, useCallback } from 'react'
-import { useSortable } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
-import { Edit, Trash2, GripVertical } from 'lucide-react'
-import type { RuleConfig } from '@/types/ruleTypes'
-import { TimeDisplay } from './time-display'
+import React, { useState } from 'react';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { GripVertical, Trash2, Edit, History } from 'lucide-react';
+import { VersionHistoryDialog } from './version-history-dialog';
 
 interface SortableItemProps {
-  id: string
-  rule: RuleConfig
-  onEdit: (rule: RuleConfig) => void
-  onDelete: (id: string) => void
-  isLoading: boolean
+  id: string;
+  name: string;
+  description: string;
+  rateLimit: string;
+  version: number;
+  onEdit: () => void;
+  onDelete: () => void;
+  onRevert: (ruleId: string, targetVersion: number) => Promise<void>;
+  isLoading: boolean;
 }
 
-const formatRequestCount = (count: number): string => {
-  if (count >= 1e9) return (count / 1e9).toFixed(1) + 'b'
-  if (count >= 1e6) return (count / 1e6).toFixed(1) + 'm'
-  if (count >= 1e3) return (count / 1e3).toFixed(1) + 'k'
-  return count.toString()
-}
-
-export function SortableItem({ id, rule, onEdit, onDelete, isLoading }: SortableItemProps) {
+export function SortableItem({
+  id,
+  name,
+  description,
+  rateLimit,
+  version,
+  onEdit,
+  onDelete,
+  onRevert,
+  isLoading,
+}: SortableItemProps) {
   const {
     attributes,
     listeners,
     setNodeRef,
     transform,
     transition,
-  } = useSortable({id: id});
+  } = useSortable({ id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
   };
 
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-
-  const handleDeleteClick = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDeleteDialogOpen(true);
-  }, []);
-
-  const handleDeleteConfirm = useCallback(() => {
-    onDelete(id);
-    setIsDeleteDialogOpen(false);
-  }, [id, onDelete]);
-
-  const formattedRequestCount = formatRequestCount(rule.rateLimit.limit);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   return (
-    <div ref={setNodeRef} style={style}>
+    <div ref={setNodeRef} style={style} {...attributes}>
       <Card className="mb-4">
-        <CardHeader className="flex flex-row items-center space-x-4 pb-2">
-          <div {...attributes} {...listeners} className="cursor-move">
-            <GripVertical className="h-5 w-5 text-gray-500" />
-          </div>
-          <div className="flex-grow">
-            <CardTitle className="text-lg font-semibold">{rule.name}</CardTitle>
-            <p className="text-sm text-gray-500">{rule.description}</p>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-between items-center">
-            <p className="text-sm">
-              Rate Limit: {formattedRequestCount} request{rule.rateLimit.limit !== 1 ? 's' : ''} per <TimeDisplay seconds={rule.rateLimit.period} />
-            </p>
-            <div className="flex space-x-2">
-              <Button variant="outline" size="sm" onClick={() => onEdit(rule)} disabled={isLoading}>
-                <Edit className="mr-2 h-4 w-4" /> Edit
-              </Button>
-              <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" size="sm" onClick={handleDeleteClick} disabled={isLoading}>
-                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure you want to delete this rule?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete the rate limit rule.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteConfirm}>Delete</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+        <CardContent className="p-4 flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div {...listeners} className="cursor-move">
+              <GripVertical className="text-gray-400" />
             </div>
+            <div>
+              <h3 className="text-lg font-semibold">{name}</h3>
+              <p className="text-sm text-gray-500">{description}</p>
+              <div className="flex items-center space-x-2 mt-2">
+                <Badge variant="secondary">{rateLimit}</Badge>
+                <Badge variant="outline">Version {version}</Badge>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button variant="outline" size="icon" onClick={onEdit} disabled={isLoading}>
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="icon" onClick={() => setIsHistoryOpen(true)} disabled={isLoading}>
+              <History className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="icon" onClick={onDelete} disabled={isLoading}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
           </div>
         </CardContent>
       </Card>
+      <VersionHistoryDialog
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        ruleId={id}
+        currentVersion={version}
+        onRevert={onRevert}
+      />
     </div>
   );
 }

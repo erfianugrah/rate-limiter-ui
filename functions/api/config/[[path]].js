@@ -16,65 +16,90 @@ export async function onRequestGet(context) {
   const configStorageId = env.CONFIG_STORAGE.idFromName('global');
   const configStorage = env.CONFIG_STORAGE.get(configStorageId);
 
-  console.log(`config.js: Received GET request for path: ${path}`);
+  console.log(`[[path]].js: Received GET request for path: ${path}`);
 
   let response;
   if (path === '/api/config') {
-    console.log('config.js: Fetching config from ConfigStorage');
+    console.log('[[path]].js: Fetching config from ConfigStorage');
     response = await configStorage.fetch('https://rate-limit-configurator/config');
-    console.log('config.js: Received response from ConfigStorage:', response.status);
   } else if (path.startsWith('/api/config/rules/')) {
-    const ruleId = path.split('/').pop();
-    console.log(`config.js: Fetching rule with ID: ${ruleId}`);
-    response = await configStorage.fetch(`https://rate-limit-configurator/rules/${ruleId}`);
+    const parts = path.split('/');
+    const ruleId = parts[4];
+    if (parts[5] === 'versions') {
+      console.log(`[[path]].js: Fetching versions for rule with ID: ${ruleId}`);
+      response = await configStorage.fetch(`https://rate-limit-configurator/versions/${ruleId}`);
+    } else {
+      console.log(`[[path]].js: Fetching rule with ID: ${ruleId}`);
+      response = await configStorage.fetch(`https://rate-limit-configurator/rules/${ruleId}`);
+    }
   } else {
-    console.log(`config.js: Invalid GET path: ${path}`);
+    console.log(`[[path]].js: Invalid GET path: ${path}`);
     return new Response(JSON.stringify({ error: 'Not found' }), {
       status: 404,
       headers: { 'Content-Type': 'application/json' },
     });
   }
 
-  const responseBody = await response.text();
-  console.log('config.js: Response body from ConfigStorage:', responseBody);
+  console.log('[[path]].js: Response status from ConfigStorage:', response.status);
 
-  return new Response(responseBody, {
-    status: response.status,
-    headers: { 'Content-Type': 'application/json' },
-  });
+  const responseBody = await response.text();
+  console.log('[[path]].js: Response body from ConfigStorage:', responseBody);
+
+  // Ensure we're returning JSON
+  try {
+    JSON.parse(responseBody);
+    return new Response(responseBody, {
+      status: response.status,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('[[path]].js: Error parsing JSON response:', error);
+    return new Response(JSON.stringify({ error: 'Invalid JSON response', details: responseBody }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 }
 
 export async function onRequestPost(context) {
   const { env, request } = context;
 
   try {
-    console.log('config.js: Received POST request to /api/config');
+    console.log('[[path]].js: Received POST request to /api/config');
 
     const configStorageId = env.CONFIG_STORAGE.idFromName('global');
-    console.log('config.js: ConfigStorage ID:', configStorageId);
+    console.log('[[path]].js: ConfigStorage ID:', configStorageId);
 
     const configStorage = env.CONFIG_STORAGE.get(configStorageId);
-    console.log('config.js: Retrieved ConfigStorage object');
+    console.log('[[path]].js: Retrieved ConfigStorage object');
 
     const newRule = await request.json();
-    console.log('config.js: Parsed request body:', JSON.stringify(newRule));
+    console.log('[[path]].js: Parsed request body:', JSON.stringify(newRule));
+
+    if (!isValidRuleStructure(newRule)) {
+      console.error('[[path]].js: Invalid rule structure', newRule);
+      return new Response(JSON.stringify({ error: 'Invalid rule structure' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
     const response = await configStorage.fetch('https://rate-limit-configurator/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newRule),
     });
-    console.log('config.js: Received response from ConfigStorage:', response.status);
+    console.log('[[path]].js: Received response from ConfigStorage:', response.status);
 
     const responseBody = await response.text();
-    console.log('config.js: Response body:', responseBody);
+    console.log('[[path]].js: Response body:', responseBody);
 
     return new Response(responseBody, {
       status: response.status,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('config.js: Error in onRequestPost:', error);
+    console.error('[[path]].js: Error in onRequestPost:', error);
     return new Response(
       JSON.stringify({ error: 'Internal Server Error', details: error.message }),
       {
@@ -90,53 +115,73 @@ export async function onRequestPut(context) {
   const url = new URL(request.url);
   const path = url.pathname;
 
-  console.log('config.js: Received PUT request to', path);
+  console.log('[[path]].js: Received PUT request to', path);
 
   try {
     const configStorageId = env.CONFIG_STORAGE.idFromName('global');
-    console.log('config.js: ConfigStorage ID:', configStorageId);
+    console.log('[[path]].js: ConfigStorage ID:', configStorageId);
 
     const configStorage = env.CONFIG_STORAGE.get(configStorageId);
-    console.log('config.js: Retrieved ConfigStorage object');
+    console.log('[[path]].js: Retrieved ConfigStorage object');
 
     const updatedData = await request.json();
-    console.log('config.js: Parsed request body:', JSON.stringify(updatedData));
+    console.log('[[path]].js: Parsed request body:', JSON.stringify(updatedData));
 
     let response;
     if (path === '/api/config/reorder') {
-      console.log('config.js: Reordering rules');
+      console.log('[[path]].js: Reordering rules');
       response = await configStorage.fetch('https://rate-limit-configurator/config/reorder', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedData),
       });
     } else if (path.startsWith('/api/config/rules/')) {
-      const ruleId = path.split('/').pop();
-      console.log(`config.js: Updating rule with ID: ${ruleId}`);
-      response = await configStorage.fetch(`https://rate-limit-configurator/rules/${ruleId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedData),
-      });
+      const parts = path.split('/');
+      const ruleId = parts[4];
+      if (parts[5] === 'revert') {
+        console.log(`[[path]].js: Reverting rule with ID: ${ruleId}`);
+        response = await configStorage.fetch(
+          `https://rate-limit-configurator/rules/${ruleId}/revert`,
+          {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedData),
+          }
+        );
+      } else {
+        console.log(`[[path]].js: Updating rule with ID: ${ruleId}`);
+        if (!isValidRuleStructure(updatedData)) {
+          console.error('[[path]].js: Invalid rule structure', updatedData);
+          return new Response(JSON.stringify({ error: 'Invalid rule structure' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        response = await configStorage.fetch(`https://rate-limit-configurator/rules/${ruleId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updatedData),
+        });
+      }
     } else {
-      console.log(`config.js: Invalid PUT path: ${path}`);
+      console.log(`[[path]].js: Invalid PUT path: ${path}`);
       return new Response(JSON.stringify({ error: 'Not found' }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    console.log('config.js: Received response from ConfigStorage:', response.status);
+    console.log('[[path]].js: Received response from ConfigStorage:', response.status);
 
     const responseBody = await response.text();
-    console.log('config.js: Response body:', responseBody);
+    console.log('[[path]].js: Response body:', responseBody);
 
     return new Response(responseBody, {
       status: response.status,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('config.js: Error in onRequestPut:', error);
+    console.error('[[path]].js: Error in onRequestPut:', error);
     return new Response(
       JSON.stringify({ error: 'Internal Server Error', details: error.message }),
       {
@@ -152,18 +197,18 @@ export async function onRequestDelete(context) {
   const url = new URL(request.url);
   const path = url.pathname;
 
-  console.log('config.js: Received DELETE request to', path);
+  console.log('[[path]].js: Received DELETE request to', path);
 
   try {
     const configStorageId = env.CONFIG_STORAGE.idFromName('global');
-    console.log('config.js: ConfigStorage ID:', configStorageId);
+    console.log('[[path]].js: ConfigStorage ID:', configStorageId);
 
     const configStorage = env.CONFIG_STORAGE.get(configStorageId);
-    console.log('config.js: Retrieved ConfigStorage object');
+    console.log('[[path]].js: Retrieved ConfigStorage object');
 
     if (path.startsWith('/api/config/rules/')) {
       const ruleId = path.split('/').pop();
-      console.log(`config.js: Deleting rule with ID: ${ruleId}`);
+      console.log(`[[path]].js: Deleting rule with ID: ${ruleId}`);
       const response = await configStorage.fetch(
         `https://rate-limit-configurator/rules/${ruleId}`,
         {
@@ -171,24 +216,24 @@ export async function onRequestDelete(context) {
         }
       );
 
-      console.log('config.js: Received response from ConfigStorage:', response.status);
+      console.log('[[path]].js: Received response from ConfigStorage:', response.status);
 
       const responseBody = await response.text();
-      console.log('config.js: Response body:', responseBody);
+      console.log('[[path]].js: Response body:', responseBody);
 
       return new Response(responseBody, {
         status: response.status,
         headers: { 'Content-Type': 'application/json' },
       });
     } else {
-      console.log(`config.js: Invalid DELETE path: ${path}`);
+      console.log(`[[path]].js: Invalid DELETE path: ${path}`);
       return new Response(JSON.stringify({ error: 'Not found' }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' },
       });
     }
   } catch (error) {
-    console.error('config.js: Error in onRequestDelete:', error);
+    console.error('[[path]].js: Error in onRequestDelete:', error);
     return new Response(
       JSON.stringify({ error: 'Internal Server Error', details: error.message }),
       {
@@ -199,10 +244,31 @@ export async function onRequestDelete(context) {
   }
 }
 
-// Catch-all handler
+function isValidRuleStructure(rule) {
+  return (
+    rule &&
+    typeof rule === 'object' &&
+    typeof rule.id === 'string' &&
+    typeof rule.order === 'number' &&
+    typeof rule.version === 'number' &&
+    typeof rule.name === 'string' &&
+    typeof rule.description === 'string' &&
+    typeof rule.rateLimit === 'object' &&
+    typeof rule.rateLimit.limit === 'number' &&
+    typeof rule.rateLimit.period === 'number' &&
+    typeof rule.fingerprint === 'object' &&
+    Array.isArray(rule.fingerprint.parameters) &&
+    typeof rule.initialMatch === 'object' &&
+    Array.isArray(rule.initialMatch.conditions) &&
+    typeof rule.initialMatch.action === 'object' &&
+    Array.isArray(rule.elseIfActions) &&
+    (!rule.elseAction || typeof rule.elseAction === 'object')
+  );
+}
+
 export const onRequest = async (context) => {
   const { request } = context;
-  console.log(`config.js: Received ${request.method} request for ${request.url}`);
+  console.log(`[[path]].js: Received ${request.method} request for ${request.url}`);
 
   switch (request.method) {
     case 'GET':
@@ -216,7 +282,7 @@ export const onRequest = async (context) => {
     case 'OPTIONS':
       return onRequestOptions(context);
     default:
-      console.log(`config.js: Unsupported method ${request.method}`);
+      console.log(`[[path]].js: Unsupported method ${request.method}`);
       return new Response('Method Not Allowed', { status: 405 });
   }
 };

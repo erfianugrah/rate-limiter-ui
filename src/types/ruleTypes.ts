@@ -1,3 +1,5 @@
+// ruleTypes.ts
+
 export interface Condition {
   field: string;
   operator: string;
@@ -27,9 +29,12 @@ export interface ConditionalAction {
   };
 }
 
+// @/types/ruleTypes.ts
+
 export interface RuleConfig {
   id: string;
   order: number;
+  version: number;
   name: string;
   description: string;
   rateLimit: {
@@ -37,14 +42,29 @@ export interface RuleConfig {
     period: number;
   };
   fingerprint: {
-    parameters: FingerprintParameter[];
+    parameters: Array<{
+      name: string;
+      headerName?: string;
+      headerValue?: string;
+      body?: string;
+    }>;
   };
-  initialMatch: ConditionalAction;
+  initialMatch: {
+    conditions: Array<any>; // Define a more specific type if possible
+    action: {
+      type: string;
+      [key: string]: any; // Allow additional properties
+    };
+  };
+  elseIfActions: Array<{
+    conditions: Array<any>; // Define a more specific type if possible
+    action: {
+      type: string;
+      [key: string]: any; // Allow additional properties
+    };
+  }>;
   elseAction?: {
     type: string;
-    statusCode?: number;
-    bodyType?: 'text' | 'json' | 'html';
-    body?: string;
+    [key: string]: any; // Allow additional properties
   };
-  elseIfActions: ConditionalAction[];
 }

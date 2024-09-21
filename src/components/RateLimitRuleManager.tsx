@@ -1,4 +1,3 @@
-// RateLimitRuleManager.tsx
 import React, { useState, useEffect, useCallback } from 'react'
 import { useToast } from "@/components/ui/use-toast"
 import { useRuleStore } from '@/store/ruleStore'
@@ -11,7 +10,7 @@ import type { DragEndEvent } from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
 
 export default function RateLimitRuleManager() {
-  const { rules, isLoading, fetchRules, addRule, updateRule, deleteRule, reorderRules } = useRuleStore()
+  const { rules, isLoading, fetchRules, addRule, updateRule, deleteRule, reorderRules, revertRule } = useRuleStore()
   const [editingRule, setEditingRule] = useState<RuleConfig | null>(null)
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
   const { toast } = useToast()
@@ -48,7 +47,7 @@ export default function RateLimitRuleManager() {
     } catch (error) {
       toast({
         title: "Error",
-        description: `Failed to delete rule: ${(error as Error).message}`,
+        description: `Failed to delete rule: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       })
     }
@@ -69,13 +68,31 @@ export default function RateLimitRuleManager() {
       })
       await fetchRules()
     } catch (error) {
+      console.error('Error saving rule:', error)
       toast({
         title: "Error",
-        description: `Failed to save rule: ${(error as Error).message}`,
+        description: `Failed to save rule: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       })
     }
   }, [editingRule, updateRule, addRule, fetchRules, toast])
+
+  const handleRevertRule = useCallback(async (ruleId: string, targetVersion: number): Promise<void> => {
+    try {
+      await revertRule(ruleId, targetVersion)
+      toast({
+        title: "Success",
+        description: `Rule reverted to version ${targetVersion} successfully.`,
+      })
+      await fetchRules()
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to revert rule: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive",
+      })
+    }
+  }, [revertRule, fetchRules, toast])
 
   const handleDragEnd = useCallback(async (event: DragEndEvent): Promise<void> => {
     const {active, over} = event;
@@ -95,7 +112,7 @@ export default function RateLimitRuleManager() {
       } catch (error) {
         toast({
           title: "Error",
-          description: `Failed to update rule order: ${(error as Error).message}`,
+          description: `Failed to update rule order: ${error instanceof Error ? error.message : 'Unknown error'}`,
           variant: "destructive",
         })
       }
@@ -132,6 +149,7 @@ export default function RateLimitRuleManager() {
           onEdit={handleEditRule}
           onDelete={handleDeleteRule}
           onReorder={handleDragEnd}
+          onRevert={handleRevertRule}
           isLoading={isLoading}
         />
       ) : (
@@ -142,6 +160,7 @@ export default function RateLimitRuleManager() {
         onOpenChange={setIsModalOpen}
         editingRule={editingRule}
         onSave={handleSaveRule}
+        onRevert={handleRevertRule}
       />
     </div>
   )

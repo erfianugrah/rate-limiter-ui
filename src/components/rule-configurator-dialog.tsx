@@ -1,5 +1,3 @@
-// RuleConfiguratorDialog.tsx
-import React from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import RateLimitConfigurator from './RateLimitConfigurator'
@@ -10,9 +8,10 @@ interface RuleConfiguratorDialogProps {
   onOpenChange: (open: boolean) => void
   editingRule: RuleConfig | null
   onSave: (config: RuleConfig) => Promise<void>
+  onRevert: (ruleId: string, targetVersion: number) => Promise<void>
 }
 
-export function RuleConfiguratorDialog({ isOpen, onOpenChange, editingRule, onSave }: RuleConfiguratorDialogProps) {
+export function RuleConfiguratorDialog({ isOpen, onOpenChange, editingRule, onSave, onRevert }: RuleConfiguratorDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[90vw] w-full max-h-[90vh] p-0">
@@ -28,6 +27,7 @@ export function RuleConfiguratorDialog({ isOpen, onOpenChange, editingRule, onSa
               initialData={editingRule || undefined}
               onSave={onSave}
               onCancel={() => onOpenChange(false)}
+              onRevert={onRevert}
             />
           </div>
         </ScrollArea>
