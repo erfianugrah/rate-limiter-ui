@@ -1,3 +1,4 @@
+// RuleConfiguratorDialog.tsx
 import React from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -14,14 +15,14 @@ interface RuleConfiguratorDialogProps {
 export function RuleConfiguratorDialog({ isOpen, onOpenChange, editingRule, onSave }: RuleConfiguratorDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[90vw] w-full max-h-[100vh] p-0">
-        <DialogHeader className="px-6 py-4">
+      <DialogContent className="max-w-[90vw] w-full max-h-[90vh] p-0">
+        <DialogHeader className="px-6 py-4 sticky top-0 bg-background z-10">
           <DialogTitle>{editingRule ? 'Edit Rule' : 'Add New Rule'}</DialogTitle>
           <DialogDescription>
             {editingRule ? 'Modify the existing rate limit rule.' : 'Create a new rate limit rule.'}
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="max-h-[calc(98vh-120px)]">
+        <ScrollArea className="max-h-[calc(90vh-120px)]">
           <div className="p-6">
             <RateLimitConfigurator
               initialData={editingRule || undefined}

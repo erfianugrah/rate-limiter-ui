@@ -27,15 +27,27 @@ export function BasicInfoTab({ formData, setFormData }: BasicInfoTabProps) {
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="name">{LABELS.RULE_NAME}</Label>
-          <Input type="text" id="name" name="name" value={formData.name} onChange={handleInputChange} />
+          <Input 
+            type="text" 
+            id="name" 
+            name="name" 
+            value={formData.name} 
+            onChange={handleInputChange}
+            placeholder="Enter rule name"
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="description">{LABELS.DESCRIPTION}</Label>
-          <Textarea id="description" name="description" value={formData.description} onChange={handleInputChange} />
+          <Textarea 
+            id="description" 
+            name="description" 
+            value={formData.description} 
+            onChange={handleInputChange}
+            placeholder="Enter rule description"
+            rows={4}
+          />
         </div>
       </CardContent>
     </Card>
   )
 }
-
-export default BasicInfoTab

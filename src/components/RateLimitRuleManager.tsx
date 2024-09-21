@@ -1,5 +1,4 @@
-'use client'
-
+// RateLimitRuleManager.tsx
 import React, { useState, useEffect, useCallback } from 'react'
 import { useToast } from "@/components/ui/use-toast"
 import { useRuleStore } from '@/store/ruleStore'
@@ -28,10 +27,6 @@ export default function RateLimitRuleManager() {
       })
     })
   }, [fetchRules, toast])
-
-  useEffect(() => {
-    console.log('Current rules in component:', rules);
-  }, [rules]);
 
   const handleAddRule = useCallback((): void => {
     setEditingRule(null)
@@ -140,7 +135,7 @@ export default function RateLimitRuleManager() {
           isLoading={isLoading}
         />
       ) : (
-        <p>No rules found. Add a new rule to get started.</p>
+        <p className="text-center text-gray-500 mt-4">No rules found. Add a new rule to get started.</p>
       )}
       <RuleConfiguratorDialog
         isOpen={isModalOpen}

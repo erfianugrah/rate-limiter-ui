@@ -12,32 +12,51 @@ interface RateLimitTabProps {
 }
 
 export function RateLimitTab({ formData, setFormData }: RateLimitTabProps) {
-  const handleRateLimitChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({
       ...prev,
-      rateLimit: { ...prev.rateLimit, [name]: parseInt(value) || 0 },
+      rateLimit: {
+        ...prev.rateLimit,
+        [name]: parseInt(value, 10) || 0,
+      },
     }))
   }
 
   return (
-    <Card>
+    <Card className="bg-background border-border">
       <CardHeader>
-        <CardTitle>Rate Limit Configuration</CardTitle>
-        <CardDescription>Set the number of requests allowed within a specific time period.</CardDescription>
+        <CardTitle className="text-foreground">Rate Limit Settings</CardTitle>
+        <CardDescription className="text-foreground-secondary">Configure the rate limit parameters for this rule.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="limit">{LABELS.REQUEST_LIMIT}</Label>
-          <Input type="number" id="limit" name="limit" value={formData.rateLimit.limit} onChange={handleRateLimitChange} />
+          <Label htmlFor="limit" className="text-foreground">{LABELS.REQUEST_LIMIT}</Label>
+          <Input
+            type="number"
+            id="limit"
+            name="limit"
+            value={formData.rateLimit.limit}
+            onChange={handleInputChange}
+            min={0}
+            placeholder="Enter request limit"
+            className="border-input focus:border-input-focus focus:ring-ring-focus"
+          />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="period">{LABELS.TIME_PERIOD}</Label>
-          <Input type="number" id="period" name="period" value={formData.rateLimit.period} onChange={handleRateLimitChange} />
+          <Label htmlFor="period" className="text-foreground">{LABELS.TIME_PERIOD}</Label>
+          <Input
+            type="number"
+            id="period"
+            name="period"
+            value={formData.rateLimit.period}
+            onChange={handleInputChange}
+            min={0}
+            placeholder="Enter time period (in seconds)"
+            className="border-input focus:border-input-focus focus:ring-ring-focus"
+          />
         </div>
       </CardContent>
     </Card>
   )
 }
-
-export default RateLimitTab
