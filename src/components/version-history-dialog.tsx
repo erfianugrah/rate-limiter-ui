@@ -38,7 +38,7 @@ export function VersionHistoryDialog({
     if (isOpen) {
       setIsLoading(true);
       setError(null);
-      fetch(`/api/config/versions/${ruleId}`)
+      fetch(`/api/config/rules/${ruleId}/versions`)
         .then((response) => {
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
