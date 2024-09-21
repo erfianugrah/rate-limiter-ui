@@ -4,8 +4,10 @@ import { CSS } from '@dnd-kit/utilities';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { GripVertical, Trash2, Edit, History } from 'lucide-react';
 import { VersionHistoryDialog } from './version-history-dialog';
+import { TimeDisplay } from './time-display';
 
 interface SortableItemProps {
   id: string;
@@ -45,6 +47,9 @@ export function SortableItem({
 
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
+  const [limit, period] = rateLimit.split('/');
+  const periodSeconds = parseInt(period);
+
   return (
     <div ref={setNodeRef} style={style} {...attributes}>
       <Card className="mb-4">
@@ -57,7 +62,21 @@ export function SortableItem({
               <h3 className="text-lg font-semibold">{name}</h3>
               <p className="text-sm text-gray-500">{description}</p>
               <div className="flex items-center space-x-2 mt-2">
-                <Badge variant="secondary">{rateLimit}</Badge>
+                <Badge variant="secondary">
+                  {limit} / 
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="cursor-help">
+                          <TimeDisplay seconds={periodSeconds} />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{periodSeconds} seconds</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </Badge>
                 <Badge variant="outline">Version {version}</Badge>
               </div>
             </div>
