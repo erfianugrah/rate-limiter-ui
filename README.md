@@ -1,72 +1,111 @@
-# Rate Limiting UI
+# Rate Limit Configurator UI
 
 ## Overview
 
-The Rate Limiting UI is a web application that allows users to configure and manage rate limiting rules for the Rate Limiting Worker. It provides an intuitive interface for creating, editing, and organizing complex rate limiting rules that can be applied to incoming requests.
+The Rate Limit Configurator UI is a web application built using the Astro Web Framework. It provides a user-friendly interface for managing rate limiting rules that are applied by a separate Rate Limiting Worker. The UI allows users to create, edit, delete, and reorder rate limiting rules, which are stored in a Durable Object bound to the UI worker.
 
-## Features
+## Project Structure
 
-- Create, edit, and delete rate limiting rules
-- Configure rule conditions based on various request properties
-- Set up fingerprinting for accurate client identification
-- Define rate limits and actions for when limits are exceeded
-- Preview and test rules before deployment
-- Manage multiple configurations for different environments
+```
+rate-limiter-configurator/
+├── src/
+│   ├── components/
+│   │   ├── ActionFields.tsx
+│   │   ├── add-rule-button.tsx
+│   │   ├── BasicInfoTab.tsx
+│   │   ├── ConditionRenderer.tsx
+│   │   ├── ExpressionTab.tsx
+│   │   ├── FingerprintTab.tsx
+│   │   ├── RateLimitConfigurator.tsx
+│   │   ├── RateLimitRuleManager.tsx
+│   │   ├── RateLimitTab.tsx
+│   │   ├── rule-configurator-dialog.tsx
+│   │   ├── rule-list.tsx
+│   │   ├── RuleLogicTab.tsx
+│   │   ├── sortable-item.tsx
+│   │   ├── theme-toggle.tsx
+│   │   ├── time-display.tsx
+│   │   ├── version-history-dialog.tsx
+│   │   └── VersionHistoryTab.tsx
+│   ├── layouts/
+│   │   └── Layout.astro
+│   ├── pages/
+│   │   └── index.astro
+│   ├── store/
+│   │   └── ruleStore.ts
+│   ├── styles/
+│   │   └── global.css
+│   └── types/
+│       └── ruleTypes.ts
+├── public/
+├── astro.config.mjs
+├── package.json
+├── tailwind.config.mjs
+├── tsconfig.json
+└── wrangler.toml
+```
 
-## Architecture
+## Key Components
 
-The Rate Limiting UI is built using React and Next.js, providing a fast and responsive single-page application experience. It communicates with a backend API to store and retrieve rate limiting configurations.
+1. **RateLimitRuleManager**: The main component that manages the list of rules and handles CRUD operations.
+2. **RateLimitConfigurator**: Handles the configuration of individual rules, including basic info, rate limit settings, fingerprint configuration, and rule logic.
+3. **RuleList**: Displays the list of rules and allows for reordering.
+4. **ThemeToggle**: Allows switching between light and dark themes.
 
-### Key Components
+## State Management
 
-1. **Rule Editor**: Allows users to create and modify rate limiting rules.
-2. **Condition Builder**: Provides a visual interface for constructing complex matching conditions.
-3. **Fingerprint Configurator**: Enables users to set up custom fingerprinting rules.
-4. **Action Selector**: Lets users define actions to take when rate limits are exceeded.
-5. **Configuration Manager**: Manages multiple rate limiting configurations.
-6. **Preview & Test**: Allows users to test rules against sample requests.
+The application uses Zustand for state management. The `ruleStore.ts` file contains the store definition with actions for fetching, adding, updating, deleting, and reordering rules.
 
-## Workflow
+## API Endpoints
 
-1. Users log in to the Rate Limiting UI.
-2. They can create a new configuration or select an existing one to edit.
-3. Within a configuration, users can add, edit, or remove rate limiting rules.
-4. For each rule, users can:
-   - Set basic information (name, description)
-   - Define matching conditions
-   - Configure fingerprinting
-   - Set rate limits (requests per time period)
-   - Choose actions for when limits are exceeded
-5. Users can preview and test their rules using the built-in testing tool.
-6. Once satisfied, users can deploy the configuration to the Rate Limiting Worker.
+The UI interacts with the following API endpoints:
 
-## Integration with Rate Limiting Worker
+- `GET /api/config`: Fetch all rules
+- `POST /api/config`: Add a new rule
+- `PUT /api/config/rules/:id`: Update an existing rule
+- `DELETE /api/config/rules/:id`: Delete a rule
+- `PUT /api/config/reorder`: Reorder rules
+- `PUT /api/config/rules/:id/revert`: Revert a rule to a previous version
+- `GET /api/config/rules/:id/versions`: Get version history for a rule
 
-The UI generates a JSON configuration that is consumed by the Rate Limiting Worker. This configuration includes all the rules, their conditions, fingerprinting settings, and actions.
+These endpoints are handled by the Durable Object bound to the UI worker.
 
-When a configuration is deployed:
-1. The UI sends the configuration to a secure storage system.
-2. The Rate Limiting Worker fetches the latest configuration from this storage.
-3. The Worker applies the new rules to incoming requests.
+## Durable Object Integration
 
-## Security Considerations
+The UI worker has a binding to a Durable Object named `CONFIG_STORAGE`. This object is responsible for storing and managing the rate limiting rules. The Durable Object provides persistence and consistency for the rule configurations.
 
-- Access to the UI is restricted to authorized personnel only.
-- All communications between the UI and the backend are encrypted.
-- The UI implements CSRF protection and input validation to prevent attacks.
-- Configurations are versioned, allowing for easy rollback if needed.
+## Deployment
 
-## Extending the UI
+The project is configured to be deployed as a Cloudflare Pages project. The `wrangler.toml` file contains the necessary configuration for the Durable Object binding and other deployment settings.
 
-The UI is designed to be modular and extensible. New components can be added to support additional features such as:
-- Analytics and reporting
-- Integration with monitoring systems
-- Support for new types of rate limiting conditions or actions
+## Development
 
-## Troubleshooting
+To run the project locally:
 
-- If changes are not reflected in the Worker, ensure the configuration has been properly deployed.
-- Use the built-in testing tool to validate rules before deployment.
-- Check the browser console and network tab for any errors during configuration.
+1. Install dependencies: `npm install`
+2. Start the development server: `npm run dev`
 
-For more detailed information on using the Rate Limiting UI, please refer to the user guide.
+To build the project for production:
+
+```
+npm run build
+```
+
+To preview the production build:
+
+```
+npm run preview
+```
+
+## Technologies Used
+
+- Astro
+- React
+- Tailwind CSS
+- Zustand
+- dnd-kit (for drag-and-drop functionality)
+- Cloudflare Workers and Durable Objects
+
+## Note on Security
+
+Ensure that proper authentication and authorization mechanisms are in place to protect the rate limit configuration API endpoints. The current implementation does not include built-in security measures.
