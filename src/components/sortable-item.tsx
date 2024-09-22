@@ -72,7 +72,7 @@ export function SortableItem({
                         </span>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>{periodSeconds} seconds</p>
+                       <p>{periodSeconds} {periodSeconds === 1 ? 'second' : 'seconds'}</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
