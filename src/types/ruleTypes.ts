@@ -9,22 +9,29 @@ export interface Condition {
 }
 
 export interface ConditionGroup {
-  conditions: (Condition | ConditionGroup | { type: 'operator'; logic: string })[];
+  conditions:
+    (Condition | ConditionGroup | { type: "operator"; logic: string })[];
 }
 
-export interface FingerprintParameter {
+export type FingerprintParameter = {
   name: string;
   headerName?: string;
   headerValue?: string;
   body?: string;
-}
+  bodyField?: string;
+  bodyFieldName?: string;
+  value?: string;
+  cookieName?: string;
+  cookieValue?: string;
+};
 
 export interface ConditionalAction {
-  conditions: (Condition | ConditionGroup | { type: 'operator'; logic: string })[];
+  conditions:
+    (Condition | ConditionGroup | { type: "operator"; logic: string })[];
   action: {
     type: string;
     statusCode?: number;
-    bodyType?: 'text' | 'json' | 'html';
+    bodyType?: "text" | "json" | "html";
     body?: string;
   };
 }
