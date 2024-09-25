@@ -1,10 +1,12 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { LABELS } from './config-variables'
 import type { RuleConfig } from '@/types/ruleTypes'
 import { Copy, Check } from 'lucide-react'
 import { Highlight, themes } from 'prism-react-renderer'
+import type { PrismTheme } from 'prism-react-renderer'
+import { useTheme } from 'next-themes'
 
 interface ExpressionTabProps {
   formData: RuleConfig
@@ -12,6 +14,19 @@ interface ExpressionTabProps {
 
 export function ExpressionTab({ formData }: ExpressionTabProps) {
   const [copied, setCopied] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const { resolvedTheme } = useTheme()
+  const [currentTheme, setCurrentTheme] = useState<PrismTheme>(themes.github)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (mounted) {
+      setCurrentTheme(resolvedTheme === 'dark' ? themes.dracula: themes.nightOwlLight)
+    }
+  }, [resolvedTheme, mounted])
 
   const generateRuleExpression = (config: RuleConfig): string => {
     return JSON.stringify(config, null, 2)
@@ -27,7 +42,7 @@ export function ExpressionTab({ formData }: ExpressionTabProps) {
   }
 
   return (
-    <Card>
+    <Card className="bg-background">
       <CardHeader>
         <CardTitle className="flex justify-between items-center">
           {LABELS.REQUEST_MATCH}
@@ -44,9 +59,13 @@ export function ExpressionTab({ formData }: ExpressionTabProps) {
       </CardHeader>
       <CardContent>
         <div className="rounded-md overflow-hidden">
-          <Highlight theme={themes.nightOwl} code={ruleExpression} language="json">
+          <Highlight theme={currentTheme} code={ruleExpression} language="json">
             {({ className, style, tokens, getLineProps, getTokenProps }) => (
-              <pre className={`${className} p-4 overflow-auto max-h-[400px]`} style={style}>
+              <pre className={`${className} p-4 overflow-auto max-h-[400px] bg-muted`} style={{
+                ...style,
+                backgroundColor: 'transparent',
+                color: resolvedTheme === 'dark' ? '#D4D4D4' : '#24292e'
+              }}>
                 {tokens.map((line, i) => (
                   <div key={i} {...getLineProps({ line, key: i })}>
                     {line.map((token, key) => (
