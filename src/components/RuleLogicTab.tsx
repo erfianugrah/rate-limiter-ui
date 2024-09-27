@@ -191,6 +191,18 @@ export default function RuleLogicTab({ formData, setFormData }: RuleLogicTabProp
     })
   }
 
+  const createActionObject = (type: string): ConditionalAction['action'] => {
+    switch (type) {
+      case 'customResponse':
+        return { type, statusCode: 200, bodyType: 'text', body: '' }
+      case 'rateLimit':
+      case 'block':
+      case 'allow':
+      default:
+        return { type }
+    }
+  }
+
   const renderActionFields = (action: ConditionalAction['action'], updateAction: (newAction: ConditionalAction['action']) => void) => {
     if (action.type === 'customResponse') {
       return (
@@ -242,7 +254,7 @@ export default function RuleLogicTab({ formData, setFormData }: RuleLogicTabProp
         ...prev.elseIfActions,
         {
           conditions: [],
-          action: { type: 'block' },
+          action: createActionObject('block'),
         },
       ],
     }))
@@ -265,7 +277,7 @@ export default function RuleLogicTab({ formData, setFormData }: RuleLogicTabProp
   const addElse = () => {
     setFormData((prev) => ({
       ...prev,
-      elseAction: { type: 'allow' },
+      elseAction: createActionObject('allow'),
     }))
   }
 
@@ -307,10 +319,7 @@ export default function RuleLogicTab({ formData, setFormData }: RuleLogicTabProp
                           ...prev,
                           initialMatch: { 
                             ...prev.initialMatch, 
-                            action: { 
-                              type: value,
-                              ...(value === 'customResponse' ? { statusCode: 200, bodyType: 'text', body: '' } : {})
-                            } 
+                            action: createActionObject(value)
                           },
                         }))
                       }}
@@ -369,10 +378,7 @@ export default function RuleLogicTab({ formData, setFormData }: RuleLogicTabProp
                         value={elseIfAction.action.type}
                         onValueChange={(value) => {
                           const updatedElseIfActions = [...formData.elseIfActions]
-                          updatedElseIfActions[index].action = { 
-                            type: value,
-                            ...(value === 'customResponse' ? { statusCode: 200, bodyType: 'text', body: '' } : {})
-                          }
+                          updatedElseIfActions[index].action = createActionObject(value)
                           setFormData((prev) => ({ ...prev, elseIfActions: updatedElseIfActions }))
                         }}
                       >
@@ -416,10 +422,7 @@ export default function RuleLogicTab({ formData, setFormData }: RuleLogicTabProp
                       onValueChange={(value) => {
                         setFormData((prev) => ({
                           ...prev,
-                          elseAction: { 
-                            type: value,
-                            ...(value === 'customResponse' ? { statusCode: 200, bodyType: 'text', body: '' } : {})
-                          },
+                          elseAction: createActionObject(value),
                         }))
                       }}
                     >
