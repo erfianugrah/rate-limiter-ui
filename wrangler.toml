@@ -10,6 +10,6 @@ pages_build_output_dir = "./dist"
 
 [durable_objects]
 bindings = [
-  { name = "CONFIG_STORAGE", class_name = "ConfigStorage", script_name = "do-rl-worker" }
+  { name = "CONFIG_STORAGE", class_name = "ConfigStorage", script_name = "rate-limiter-config-storage" }
 ]
 
