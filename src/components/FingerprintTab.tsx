@@ -18,6 +18,10 @@ interface FingerprintTabProps {
   setFormData: React.Dispatch<React.SetStateAction<RuleConfig>>
 }
 
+const MAX_HEADER_NAME_LENGTH = 50
+const MAX_HEADER_VALUE_LENGTH = 100
+const MAX_BODY_LENGTH = 500
+
 const ParameterInput: React.FC<{
   param: FingerprintParameter
   onRemove: () => void
@@ -27,80 +31,113 @@ const ParameterInput: React.FC<{
     switch (param.name) {
       case 'headers.name':
         return (
-          <Input
-            value={param.headerName || ''}
-            onChange={(e) => onChange({ ...param, headerName: e.target.value })}
-            placeholder="Value of Header (Input header name)"
-            className="flex-1 bg-gray-700 text-white border-gray-600"
-          />
+          <>
+            <Input
+              value={param.headerName || ''}
+              onChange={(e) => onChange({ ...param, headerName: e.target.value.slice(0, MAX_HEADER_NAME_LENGTH) })}
+              placeholder="Value of Header (Input header name)"
+              className="flex-1 bg-gray-700 text-white border-gray-600"
+              maxLength={MAX_HEADER_NAME_LENGTH}
+            />
+            <p className="text-sm text-muted-foreground">
+              {param.headerName?.length || 0}/{MAX_HEADER_NAME_LENGTH}
+            </p>
+          </>
         )
       case 'headers.cookieNameValue':
         return (
           <>
-          <Input
-            value={param.cookieName || ''}
-            onChange={(e) => onChange({ ...param, cookieName: e.target.value })}
-            placeholder="Specific cookie name"
-            className="flex-1 bg-gray-700 text-white border-gray-600"
-          />
-          <Input
-            value={param.cookieValue || ''}
-            onChange={(e) => onChange({ ...param, cookieValue: e.target.value })}
-            placeholder="Specific cookie value"
-            className="flex-1 bg-gray-700 text-white border-gray-600"
-          />
+            <Input
+              value={param.cookieName || ''}
+              onChange={(e) => onChange({ ...param, cookieName: e.target.value.slice(0, MAX_HEADER_NAME_LENGTH) })}
+              placeholder="Specific cookie name"
+              className="flex-1 bg-gray-700 text-white border-gray-600"
+              maxLength={MAX_HEADER_NAME_LENGTH}
+            />
+            <Input
+              value={param.cookieValue || ''}
+              onChange={(e) => onChange({ ...param, cookieValue: e.target.value.slice(0, MAX_HEADER_VALUE_LENGTH) })}
+              placeholder="Specific cookie value"
+              className="flex-1 bg-gray-700 text-white border-gray-600"
+              maxLength={MAX_HEADER_VALUE_LENGTH}
+            />
+            <p className="text-sm text-muted-foreground">
+              {param.cookieName?.length || 0}/{MAX_HEADER_NAME_LENGTH} | {param.cookieValue?.length || 0}/{MAX_HEADER_VALUE_LENGTH}
+            </p>
           </>
         )     
       case 'headers.cookieName':
         return (
-          <Input
-            value={param.cookieName || ''}
-            onChange={(e) => onChange({ ...param, cookieName: e.target.value })}
-            placeholder="Use a specific cookie's value for fingerprinting (Input Cookie Key)"
-            className="flex-1 bg-gray-700 text-white border-gray-600"
-          />
+          <>
+            <Input
+              value={param.cookieName || ''}
+              onChange={(e) => onChange({ ...param, cookieName: e.target.value.slice(0, MAX_HEADER_NAME_LENGTH) })}
+              placeholder="Use a specific cookie's value for fingerprinting (Input Cookie Key)"
+              className="flex-1 bg-gray-700 text-white border-gray-600"
+              maxLength={MAX_HEADER_NAME_LENGTH}
+            />
+            <p className="text-sm text-muted-foreground">
+              {param.cookieName?.length || 0}/{MAX_HEADER_NAME_LENGTH}
+            </p>
+          </>
         ) 
       case 'headers.nameValue':
         return (
           <>
             <Input
               value={param.headerName || ''}
-              onChange={(e) => onChange({ ...param, headerName: e.target.value })}
+              onChange={(e) => onChange({ ...param, headerName: e.target.value.slice(0, MAX_HEADER_NAME_LENGTH) })}
               placeholder="Header Name"
               className="flex-1 bg-gray-700 text-white border-gray-600 mr-2"
+              maxLength={MAX_HEADER_NAME_LENGTH}
             />
             <Input
               value={param.headerValue || ''}
-              onChange={(e) => onChange({ ...param, headerValue: e.target.value })}
+              onChange={(e) => onChange({ ...param, headerValue: e.target.value.slice(0, MAX_HEADER_VALUE_LENGTH) })}
               placeholder="Header Value"
               className="flex-1 bg-gray-700 text-white border-gray-600"
+              maxLength={MAX_HEADER_VALUE_LENGTH}
             />
+            <p className="text-sm text-muted-foreground">
+              {param.headerName?.length || 0}/{MAX_HEADER_NAME_LENGTH} | {param.headerValue?.length || 0}/{MAX_HEADER_VALUE_LENGTH}
+            </p>
           </>
         )
       case 'body':
         return (
-          <Textarea
-            value={param.body || ''}
-            onChange={(e) => onChange({ ...param, body: e.target.value })}
-            placeholder="Enter full request body"
-            className="flex-1 min-h-[100px] bg-gray-700 text-white border-gray-600"
-          />
+          <>
+            <Textarea
+              value={param.body || ''}
+              onChange={(e) => onChange({ ...param, body: e.target.value.slice(0, MAX_BODY_LENGTH) })}
+              placeholder="Enter full request body"
+              className="flex-1 min-h-[100px] bg-gray-700 text-white border-gray-600"
+              maxLength={MAX_BODY_LENGTH}
+            />
+            <p className="text-sm text-muted-foreground">
+              {param.body?.length || 0}/{MAX_BODY_LENGTH} characters
+            </p>
+          </>
         )
       case 'body.field':
         return (
           <>
             <Input
               value={param.bodyFieldName || ''}
-              onChange={(e) => onChange({ ...param, bodyFieldName: e.target.value })}
+              onChange={(e) => onChange({ ...param, bodyFieldName: e.target.value.slice(0, MAX_HEADER_NAME_LENGTH) })}
               placeholder="Body Field Name"
               className="flex-1 bg-gray-700 text-white border-gray-600 mr-2"
+              maxLength={MAX_HEADER_NAME_LENGTH}
             />
             <Input
               value={param.bodyField || ''}
-              onChange={(e) => onChange({ ...param, bodyField: e.target.value })}
+              onChange={(e) => onChange({ ...param, bodyField: e.target.value.slice(0, MAX_HEADER_VALUE_LENGTH) })}
               placeholder="Body Field Value"
               className="flex-1 bg-gray-700 text-white border-gray-600"
+              maxLength={MAX_HEADER_VALUE_LENGTH}
             />
+            <p className="text-sm text-muted-foreground">
+              {param.bodyFieldName?.length || 0}/{MAX_HEADER_NAME_LENGTH} | {param.bodyField?.length || 0}/{MAX_HEADER_VALUE_LENGTH}
+            </p>
           </>
         )
       default:
