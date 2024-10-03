@@ -7,6 +7,8 @@ pages_build_output_dir = "./dist"
 # You might want to add these for better control over your project
 # main = "./functions/[[path]].js"  # Uncomment if you have a catch-all function
 # workers_dev = true
+[observability]
+enabled = true
 
 [durable_objects]
 bindings = [
