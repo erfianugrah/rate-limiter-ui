@@ -172,7 +172,7 @@ export function ConditionRenderer({ conditions, setFormData, depth = 0 }: Condit
               ) : (
                 <Input
                   type="text"
-                  value={typedCondition.value}
+                  value={typedCondition.value?.toString() || ''}
                   onChange={(e) => {
                     typedCondition.value = e.target.value
                     setFormData((prev: any) => ({ ...prev }))

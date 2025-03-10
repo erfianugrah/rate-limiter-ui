@@ -1,15 +1,17 @@
 import { create } from "zustand";
 import { v4 as uuidv4 } from "uuid";
-import type { ConditionalAction, RuleConfig } from "../types/ruleTypes";
+import type { ConditionalAction, Rule, RuleAction } from "../types/ruleTypes";
+import { transformToCanonicalRule, transformToUIRule } from "../lib/transformations";
 
-function normalizeAction(
-  action: ConditionalAction["action"],
-): ConditionalAction["action"] {
+/**
+ * Normalizes an action to ensure it has all required fields
+ */
+function normalizeAction(action: RuleAction): RuleAction {
   switch (action.type) {
     case "customResponse":
       return {
         type: "customResponse",
-        statusCode: action.statusCode || 200,
+        statusCode: action.statusCode || action.status || 200,
         bodyType: action.bodyType || "text",
         body: action.body || "",
       };
@@ -21,9 +23,14 @@ function normalizeAction(
   }
 }
 
-function normalizeRule(rule: RuleConfig): RuleConfig {
+/**
+ * Normalizes a rule to ensure all fields follow UI conventions
+ */
+function normalizeRule(rule: Rule): Rule {
   return {
     ...rule,
+    // Support both order and priority, with order taking precedence for UI
+    order: rule.order !== undefined ? rule.order : rule.priority,
     initialMatch: {
       ...rule.initialMatch,
       action: normalizeAction(rule.initialMatch.action),
@@ -37,16 +44,14 @@ function normalizeRule(rule: RuleConfig): RuleConfig {
 }
 
 interface RuleStore {
-  rules: RuleConfig[];
+  rules: Rule[];
   isLoading: boolean;
   fetchRules: () => Promise<void>;
-  addRule: (
-    rule: Omit<RuleConfig, "id" | "order" | "version">,
-  ) => Promise<RuleConfig>;
-  updateRule: (rule: RuleConfig) => Promise<RuleConfig>;
+  addRule: (rule: Omit<Rule, "id" | "order" | "priority" | "version">) => Promise<Rule>;
+  updateRule: (rule: Rule) => Promise<Rule>;
   deleteRule: (id: string) => Promise<void>;
-  reorderRules: (rules: RuleConfig[]) => Promise<void>;
-  revertRule: (ruleId: string, targetVersion: number) => Promise<RuleConfig>;
+  reorderRules: (rules: Rule[]) => Promise<void>;
+  revertRule: (ruleId: string, targetVersion: string) => Promise<Rule>;
 }
 
 export const useRuleStore = create<RuleStore>((set, get) => ({
@@ -73,10 +78,13 @@ export const useRuleStore = create<RuleStore>((set, get) => ({
       }
       const data = await response.json();
       console.log("Fetched rules:", data);
-      const normalizedRules = Array.isArray(data.rules)
-        ? data.rules.map(normalizeRule)
+      
+      // Transform the rules from API format to UI format
+      const transformedRules = Array.isArray(data.rules)
+        ? data.rules.map((rule: any) => normalizeRule(transformToUIRule(rule)))
         : [];
-      set({ rules: normalizedRules });
+      
+      set({ rules: transformedRules });
     } catch (error) {
       console.error("Error fetching rules:", error);
       throw error;
@@ -84,16 +92,22 @@ export const useRuleStore = create<RuleStore>((set, get) => ({
       set({ isLoading: false });
     }
   },
-  addRule: async (rule: Omit<RuleConfig, "id" | "order" | "version">) => {
+  
+  addRule: async (rule: Omit<Rule, "id" | "order" | "priority" | "version">) => {
     set({ isLoading: true });
     try {
-      const newRule = normalizeRule({
+      // Create a new rule with UI-specific fields
+      const newUIRule = normalizeRule({
         ...rule,
         id: uuidv4(),
         order: get().rules.length,
         version: 0,
       });
-      console.log("Adding new rule:", newRule);
+      
+      // Transform to canonical format for API submission
+      const canonicalRule = transformToCanonicalRule(newUIRule);
+      console.log("Adding new rule:", canonicalRule);
+      
       const response = await fetch("/api/config", {
         method: "POST",
         headers: {
@@ -102,8 +116,9 @@ export const useRuleStore = create<RuleStore>((set, get) => ({
           Pragma: "no-cache",
           Expires: "0",
         },
-        body: JSON.stringify(newRule),
+        body: JSON.stringify(canonicalRule),
       });
+      
       console.log("Add rule response status:", response.status);
       if (!response.ok) {
         const errorText = await response.text();
@@ -112,11 +127,14 @@ export const useRuleStore = create<RuleStore>((set, get) => ({
           `Failed to add rule: ${response.status} ${response.statusText}`,
         );
       }
-      const addedRule = await response.json();
-      console.log("Added rule:", addedRule);
-      const normalizedAddedRule = normalizeRule(addedRule);
-      set((state) => ({ rules: [...state.rules, normalizedAddedRule] }));
-      return normalizedAddedRule;
+      
+      // Transform the response back to UI format
+      const apiResponse = await response.json();
+      console.log("Added rule API response:", apiResponse);
+      const uiRule = normalizeRule(transformToUIRule(apiResponse));
+      
+      set((state) => ({ rules: [...state.rules, uiRule] }));
+      return uiRule;
     } catch (error) {
       console.error("Error adding rule:", error);
       throw error;
@@ -124,12 +142,18 @@ export const useRuleStore = create<RuleStore>((set, get) => ({
       set({ isLoading: false });
     }
   },
-  updateRule: async (updatedRule: RuleConfig) => {
+  
+  updateRule: async (updatedRule: Rule) => {
     set({ isLoading: true });
     try {
+      // Normalize the rule for UI consistency
       const normalizedRule = normalizeRule(updatedRule);
-      console.log("Updating rule:", normalizedRule);
-      const response = await fetch(`/api/config/rules/${normalizedRule.id}`, {
+      
+      // Transform to canonical format for API
+      const canonicalRule = transformToCanonicalRule(normalizedRule);
+      console.log("Updating rule (canonical format):", canonicalRule);
+      
+      const response = await fetch(`/api/config/rules/${canonicalRule.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -137,8 +161,9 @@ export const useRuleStore = create<RuleStore>((set, get) => ({
           Pragma: "no-cache",
           Expires: "0",
         },
-        body: JSON.stringify(normalizedRule),
+        body: JSON.stringify(canonicalRule),
       });
+      
       console.log("Update rule response status:", response.status);
       if (!response.ok) {
         const errorText = await response.text();
@@ -147,15 +172,19 @@ export const useRuleStore = create<RuleStore>((set, get) => ({
           `Failed to update rule: ${response.status} ${response.statusText}`,
         );
       }
+      
+      // Transform the response back to UI format
       const updatedRuleData = await response.json();
-      console.log("Updated rule data:", updatedRuleData);
-      const normalizedUpdatedRule = normalizeRule(updatedRuleData.rule);
+      console.log("Updated rule data from API:", updatedRuleData);
+      const uiRule = normalizeRule(transformToUIRule(updatedRuleData.rule));
+      
       set((state) => ({
         rules: state.rules.map((rule) =>
-          rule.id === updatedRule.id ? normalizedUpdatedRule : rule
+          rule.id === updatedRule.id ? uiRule : rule
         ),
       }));
-      return normalizedUpdatedRule;
+      
+      return uiRule;
     } catch (error) {
       console.error("Error updating rule:", error);
       throw error;
@@ -163,6 +192,7 @@ export const useRuleStore = create<RuleStore>((set, get) => ({
       set({ isLoading: false });
     }
   },
+  
   deleteRule: async (id: string) => {
     set({ isLoading: true });
     try {
@@ -175,6 +205,7 @@ export const useRuleStore = create<RuleStore>((set, get) => ({
           Expires: "0",
         },
       });
+      
       console.log("Delete rule response status:", response.status);
       if (!response.ok) {
         const errorText = await response.text();
@@ -183,8 +214,10 @@ export const useRuleStore = create<RuleStore>((set, get) => ({
           `Failed to delete rule: ${response.status} ${response.statusText}`,
         );
       }
+      
       const deletedRuleData = await response.json();
       console.log("Deleted rule data:", deletedRuleData);
+      
       set((state) => ({
         rules: state.rules.filter((rule) => rule.id !== id),
       }));
@@ -195,11 +228,22 @@ export const useRuleStore = create<RuleStore>((set, get) => ({
       set({ isLoading: false });
     }
   },
-  reorderRules: async (reorderedRules: RuleConfig[]) => {
+  
+  reorderRules: async (reorderedRules: Rule[]) => {
     set({ isLoading: true });
     try {
-      const normalizedReorderedRules = reorderedRules.map(normalizeRule);
-      console.log("Reordering rules:", normalizedReorderedRules);
+      // Transform all rules to canonical format for API
+      const canonicalRules = reorderedRules.map((rule, index) => {
+        // Update each rule's order/priority based on new position
+        const updatedRule = { 
+          ...rule, 
+          order: index,
+          priority: index 
+        };
+        return transformToCanonicalRule(updatedRule);
+      });
+      
+      console.log("Reordering rules (canonical format):", canonicalRules);
       const response = await fetch("/api/config/reorder", {
         method: "PUT",
         headers: {
@@ -208,8 +252,9 @@ export const useRuleStore = create<RuleStore>((set, get) => ({
           Pragma: "no-cache",
           Expires: "0",
         },
-        body: JSON.stringify({ rules: normalizedReorderedRules }),
+        body: JSON.stringify({ rules: canonicalRules }),
       });
+      
       console.log("Reorder rules response status:", response.status);
       if (!response.ok) {
         const errorText = await response.text();
@@ -218,10 +263,15 @@ export const useRuleStore = create<RuleStore>((set, get) => ({
           `Failed to reorder rules: ${response.status} ${response.statusText}`,
         );
       }
+      
+      // Transform response back to UI format
       const reorderedData = await response.json();
-      console.log("Reordered rules data:", reorderedData);
-      const normalizedReorderedData = reorderedData.rules.map(normalizeRule);
-      set({ rules: normalizedReorderedData });
+      console.log("Reordered rules data from API:", reorderedData);
+      const uiRules = reorderedData.rules.map((rule: any) => 
+        normalizeRule(transformToUIRule(rule))
+      );
+      
+      set({ rules: uiRules });
     } catch (error) {
       console.error("Error reordering rules:", error);
       throw error;
@@ -229,7 +279,8 @@ export const useRuleStore = create<RuleStore>((set, get) => ({
       set({ isLoading: false });
     }
   },
-  revertRule: async (ruleId: string, targetVersion: number) => {
+  
+  revertRule: async (ruleId: string, targetVersion: string) => {
     set({ isLoading: true });
     try {
       console.log(`Reverting rule ${ruleId} to version ${targetVersion}`);
@@ -243,6 +294,7 @@ export const useRuleStore = create<RuleStore>((set, get) => ({
         },
         body: JSON.stringify({ targetVersion }),
       });
+      
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Error response body:", errorText);
@@ -250,15 +302,17 @@ export const useRuleStore = create<RuleStore>((set, get) => ({
           `Failed to revert rule: ${response.status} ${response.statusText}`,
         );
       }
+      
+      // Transform reverted rule from API to UI format
       const revertedRuleData = await response.json();
-      console.log("Reverted rule data:", revertedRuleData);
-      const normalizedRevertedRule = normalizeRule(revertedRuleData.rule);
+      console.log("Reverted rule data from API:", revertedRuleData);
+      const uiRule = normalizeRule(transformToUIRule(revertedRuleData.rule));
+      
       set((state) => ({
-        rules: state.rules.map((
-          rule,
-        ) => (rule.id === ruleId ? normalizedRevertedRule : rule)),
+        rules: state.rules.map((rule) => (rule.id === ruleId ? uiRule : rule)),
       }));
-      return normalizedRevertedRule;
+      
+      return uiRule;
     } catch (error) {
       console.error("Error reverting rule:", error);
       throw error;

@@ -79,7 +79,7 @@ export default function RateLimitRuleManager() {
     }
   }, [editingRule, updateRule, addRule, fetchRules, toast])
 
-  const handleRevertRule = useCallback(async (ruleId: string, targetVersion: number): Promise<void> => {
+  const handleRevertRule = useCallback(async (ruleId: string, targetVersion: string): Promise<void> => {
     try {
       const revertedRule = await revertRule(ruleId, targetVersion)
       if (editingRule && editingRule.id === ruleId) {
@@ -87,7 +87,7 @@ export default function RateLimitRuleManager() {
       }
       toast({
         title: "Success",
-        description: `Rule reverted to version ${targetVersion} successfully.`,
+        description: `Rule reverted successfully.`,
       })
       await fetchRules()
     } catch (error) {

@@ -21,7 +21,7 @@ interface RuleListProps {
   onReorder: (event: DragEndEvent) => Promise<void>;
   onEdit: (rule: RuleConfig) => void;
   onDelete: (id: string) => Promise<void>;
-  onRevert: (ruleId: string, targetVersion: number) => Promise<void>;
+  onRevert: (ruleId: string, targetVersion: string) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -51,7 +51,7 @@ export function RuleList({ rules, onReorder, onEdit, onDelete, onRevert, isLoadi
                 name={rule.name}
                 description={rule.description}
                 rateLimit={`${rule.rateLimit.limit}/${rule.rateLimit.period}s`}
-                version={rule.version}
+                version={rule.version !== undefined ? rule.version : 0}
                 onEdit={() => onEdit(rule)}
                 onDelete={() => onDelete(rule.id)}
                 onRevert={onRevert}

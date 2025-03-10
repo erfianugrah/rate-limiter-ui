@@ -8,7 +8,7 @@ interface RuleConfiguratorDialogProps {
   onOpenChange: (open: boolean) => void
   editingRule: RuleConfig | null
   onSave: (config: RuleConfig) => Promise<void>
-  onRevert: (ruleId: string, targetVersion: number) => Promise<void>
+  onRevert: (ruleId: string, targetVersion: string) => Promise<void>
 }
 
 export function RuleConfiguratorDialog({ isOpen, onOpenChange, editingRule, onSave, onRevert }: RuleConfiguratorDialogProps) {

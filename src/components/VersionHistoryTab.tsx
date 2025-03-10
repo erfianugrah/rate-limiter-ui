@@ -4,15 +4,16 @@ import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 interface VersionInfo {
-  version: number
+  version: string // Changed from number to string to match backend versionId
+  displayVersion: number // Numeric version for display (count-based)
   timestamp: string
   changes: string
 }
 
 interface VersionHistoryTabProps {
   ruleId: string
-  currentVersion: number
-  onRevert: (ruleId: string, targetVersion: number) => Promise<void>
+  currentVersion: string
+  onRevert: (ruleId: string, targetVersion: string) => Promise<void>
 }
 
 export default function VersionHistoryTab({ ruleId, currentVersion, onRevert }: VersionHistoryTabProps) {
@@ -23,13 +24,25 @@ export default function VersionHistoryTab({ ruleId, currentVersion, onRevert }: 
     const fetchVersionHistory = async () => {
       setIsLoading(true)
       try {
-        // Replace this with an actual API call
         const response = await fetch(`/api/config/rules/${ruleId}/versions`)
         if (!response.ok) {
           throw new Error('Failed to fetch version history')
         }
         const data = await response.json()
-        setVersions(data.versions)
+        
+        // Transform backend versions data to match UI component's expected format
+        const transformedVersions = Array.isArray(data.versions) 
+          ? data.versions.map((version: any, index: number) => ({
+              version: version.versionId, // Use versionId as version identifier
+              displayVersion: data.versions.length - index, // Calculate display version from total count
+              timestamp: version.timestamp,
+              changes: Array.isArray(version.changes) 
+                ? version.changes.join(', ') 
+                : (version.changes || 'Updated rule')
+            }))
+          : []
+        
+        setVersions(transformedVersions)
       } catch (error) {
         console.error('Error fetching version history:', error)
         // Handle error (e.g., show a toast notification)
@@ -41,8 +54,8 @@ export default function VersionHistoryTab({ ruleId, currentVersion, onRevert }: 
     fetchVersionHistory()
   }, [ruleId])
 
-  const handleRevert = async (targetVersion: number) => {
-    if (window.confirm(`Are you sure you want to revert to version ${targetVersion}?`)) {
+  const handleRevert = async (targetVersion: string) => {
+    if (window.confirm(`Are you sure you want to revert to this version?`)) {
       try {
         await onRevert(ruleId, targetVersion)
       } catch (error) {
@@ -68,13 +81,13 @@ export default function VersionHistoryTab({ ruleId, currentVersion, onRevert }: 
             </TableRow>
           </TableHeader>
           <TableBody>
-            {versions.map((version) => (
+            {versions.map((version, index) => (
               <TableRow key={version.version}>
-                <TableCell>{version.version}</TableCell>
+                <TableCell>{version.displayVersion}</TableCell>
                 <TableCell>{new Date(version.timestamp).toLocaleString()}</TableCell>
                 <TableCell>{version.changes}</TableCell>
                 <TableCell>
-                  {version.version !== currentVersion && (
+                  {String(version.version) !== String(currentVersion) && (
                     <Button
                       variant="outline"
                       size="sm"

@@ -18,7 +18,7 @@ interface RateLimitConfiguratorProps {
   initialData?: RuleConfig
   onSave: (config: RuleConfig) => Promise<void>
   onCancel: () => void
-  onRevert: (ruleId: string, targetVersion: number) => Promise<void>
+  onRevert: (ruleId: string, targetVersion: string) => Promise<void>
 }
 
 const defaultFormData: RuleConfig = {
@@ -124,7 +124,7 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel, o
                 <TabsContent value="versionHistory">
                   <VersionHistoryTab
                     ruleId={formData.id}
-                    currentVersion={formData.version}
+                    currentVersion={String(formData.version || 0)}
                     onRevert={onRevert}
                   />
                 </TabsContent>
@@ -133,7 +133,7 @@ export default function RateLimitConfigurator({ initialData, onSave, onCancel, o
           </Tabs>
           <div className="flex justify-between items-center space-x-4 p-4 bg-background border-t">
             <div className="text-sm text-gray-500">
-              Current Version: {formData.version}
+              {formData.version ? `Current Version: ${typeof formData.version === 'number' ? formData.version : 'Latest'}` : 'New Rule'}
             </div>
             <div>
               <Button type="button" variant="outline" onClick={onCancel} className="mr-2">

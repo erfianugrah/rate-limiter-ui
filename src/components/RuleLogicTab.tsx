@@ -173,7 +173,7 @@ export default function RuleLogicTab({ formData, setFormData }: RuleLogicTabProp
             ) : (
               <Input
                 type="text"
-                value={typedCondition.value}
+                value={typedCondition.value?.toString() || ''}
                 onChange={(e) => {
                   typedCondition.value = e.target.value
                   setFormData({ ...formData })

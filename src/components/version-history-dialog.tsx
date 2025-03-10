@@ -9,7 +9,8 @@ import {
 import { Button } from "@/components/ui/button";
 
 interface Version {
-  version: number;
+  version: string; // Changed from number to string to match backend versionId
+  displayVersion: number; // Numeric version for display (count-based)
   timestamp: string;
   changes: string[];
   data: any;
@@ -19,8 +20,8 @@ interface VersionHistoryDialogProps {
   isOpen: boolean;
   onClose: () => void;
   ruleId: string;
-  currentVersion: number;
-  onRevert: (ruleId: string, targetVersion: number) => Promise<void>;
+  currentVersion: number | string;
+  onRevert: (ruleId: string, targetVersion: string) => Promise<void>;
 }
 
 export function VersionHistoryDialog({
@@ -46,7 +47,17 @@ export function VersionHistoryDialog({
           return response.json();
         })
         .then((data) => {
-          setVersions(data.versions);
+          // Transform backend versions data to match UI component's expected format
+          const transformedVersions = Array.isArray(data.versions) 
+            ? data.versions.map((version: any, index: number) => ({
+                version: version.versionId, // Use versionId as version identifier
+                displayVersion: data.versions.length - index, // Calculate display version from total count
+                timestamp: version.timestamp,
+                changes: Array.isArray(version.changes) ? version.changes : [version.changes || 'Updated rule'],
+                data: version.rule || version.data
+              }))
+            : [];
+          setVersions(transformedVersions);
           setIsLoading(false);
         })
         .catch((e) => {
@@ -56,7 +67,7 @@ export function VersionHistoryDialog({
     }
   }, [isOpen, ruleId]);
 
-  const handleRevert = async (targetVersion: number) => {
+  const handleRevert = async (targetVersion: string) => {
     try {
       await onRevert(ruleId, targetVersion);
       onClose();
@@ -78,18 +89,18 @@ export function VersionHistoryDialog({
           <p className="text-red-500">{error}</p>
         ) : (
           <ul className="space-y-4">
-            {versions.map((version) => (
+            {versions.map((version, index) => (
               <li key={version.version} className="flex justify-between items-center">
                 <div>
-                  <p className="font-semibold">Version {version.version}</p>
+                  <p className="font-semibold">Version {version.displayVersion}</p>
                   <p className="text-sm text-gray-500">{new Date(version.timestamp).toLocaleString()}</p>
                   <ul className="list-disc list-inside">
-                    {version.changes.map((change, index) => (
-                      <li key={index} className="text-sm">{change}</li>
+                    {version.changes.map((change, i) => (
+                      <li key={i} className="text-sm">{change}</li>
                     ))}
                   </ul>
                 </div>
-                {version.version !== currentVersion && (
+                {String(version.version) !== String(currentVersion) && (
                   <Button onClick={() => handleRevert(version.version)}>Revert</Button>
                 )}
               </li>

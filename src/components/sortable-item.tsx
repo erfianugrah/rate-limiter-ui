@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,10 +14,10 @@ interface SortableItemProps {
   name: string;
   description: string;
   rateLimit: string;
-  version: number;
+  version: number | string;
   onEdit: () => void;
   onDelete: () => void;
-  onRevert: (ruleId: string, targetVersion: number) => Promise<void>;
+  onRevert: (ruleId: string, targetVersion: string) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -46,6 +46,26 @@ export function SortableItem({
   };
 
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [versionCount, setVersionCount] = useState(0);
+  
+  // Fetch version count on mount
+  useEffect(() => {
+    const fetchVersionCount = async () => {
+      try {
+        const response = await fetch(`/api/config/rules/${id}/versions`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.versions && Array.isArray(data.versions)) {
+            setVersionCount(data.versions.length);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching version count:", error);
+      }
+    };
+    
+    fetchVersionCount();
+  }, [id]);
 
   const [limit, period] = rateLimit.split('/');
   const periodSeconds = parseInt(period);
@@ -77,7 +97,9 @@ export function SortableItem({
                     </Tooltip>
                   </TooltipProvider>
                 </Badge>
-                <Badge variant="outline">Version {version}</Badge>
+                <Badge variant="outline" onClick={() => setIsHistoryOpen(true)} className="hover:bg-gray-100 cursor-pointer">
+                  {isHistoryOpen ? "Loading..." : `Versions: ${versionCount || (typeof version === 'number' ? version : 0)}`}
+                </Badge>
               </div>
             </div>
           </div>
