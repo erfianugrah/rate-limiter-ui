@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useToast } from "@/components/ui/use-toast"
 import { useRuleStore } from '@/store/ruleStore'
 import type { RuleConfig } from '@/types/ruleTypes'

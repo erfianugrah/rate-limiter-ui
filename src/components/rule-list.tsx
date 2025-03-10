@@ -1,5 +1,4 @@
 // src/components/rule-list.tsx
-import React from 'react';
 import {
   DndContext,
   closestCenter,
